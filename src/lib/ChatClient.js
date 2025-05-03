@@ -247,6 +247,8 @@ class ChatClient {
 
     // Dial the WebSocket.
     dial() {
+        this.firstMe = false;
+
         // Polling API?
         if (this.usePolling) {
             this.ChatClient("Connecting to the server via polling API...");

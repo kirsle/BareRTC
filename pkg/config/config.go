@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"os"
+	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"github.com/google/uuid"
@@ -12,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 16
+var currentVersion = 17
 
 // Config for your BareRTC app.
 type Config struct {
@@ -53,6 +54,7 @@ type Config struct {
 	ModerationRule []*ModerationRule
 
 	DirectMessageHistory DirectMessageHistory
+	DMLinkSpamProtection DMLinkSpamProtection
 
 	Strings Strings
 
@@ -77,6 +79,13 @@ type DirectMessageHistory struct {
 	SQLiteDatabase    string
 	RetentionDays     int
 	DisclaimerMessage string
+}
+
+type DMLinkSpamProtection struct {
+	Enabled    bool          `toml:"" comment:"Spam detection in case a user pastes the same URL into several DM threads in a short timeframe,\ne.g. trying to take your entire userbase to a competing chat room."`
+	MaxThreads int           `toml:"" comment:"The max number of DM threads the user can paste the same link into"`
+	TimeLimit  time.Duration `toml:"" comment:"Rate limit (in seconds), if the user spams MaxThreads within the rate limit they are kicked or banned from chat."`
+	BanHours   time.Duration `toml:"" comment:"The user will be kicked the first time, if they log back in and spam once more they are banned for this many hours."`
 }
 
 // GetChannels returns a JavaScript safe array of the default PublicChannels.
@@ -237,6 +246,12 @@ func DefaultConfig() Config {
 			SQLiteDatabase:    "database.sqlite",
 			RetentionDays:     90,
 			DisclaimerMessage: `<i class="fa fa-info-circle mr-1"></i> <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.`,
+		},
+		DMLinkSpamProtection: DMLinkSpamProtection{
+			Enabled:    true,
+			MaxThreads: 5,
+			TimeLimit:  60 * 60,
+			BanHours:   24,
 		},
 		Logging: Logging{
 			Directory: "./logs",

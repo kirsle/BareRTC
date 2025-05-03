@@ -1048,14 +1048,15 @@ export default {
 
         // Sync the current user state (such as video broadcasting status) to
         // the backend, which will reload everybody's Who List.
-        sendMe() {
-            if (!this.connected) return;
-            this.client.send({
+        sendMe(force) {
+            if (!this.connected && !force) return;
+            let payload = {
                 action: "me",
                 video: this.myVideoFlag,
                 status: this.status,
                 dnd: this.prefs.closeDMs,
-            });
+            };
+            this.client.send(payload);
         },
         onMe(msg) {
             // We have had settings pushed to us by the server, such as a change
@@ -1141,7 +1142,14 @@ export default {
 
             // Do we need to set our me status again?
             if (sendMe) {
-                this.sendMe();
+                // TODO: Delay a random period before sending the 'me' action, to help alleviate rough server reboots.
+                // Ideally: onLoggedIn() sends a "me" with the user's status/video setting immediately. On a server
+                // reboot, the first WhoList is sent 15 seconds after boot, and should (does!) send the correct "status"
+                // flags for each user online (so they don't need to re-send "me" to correct it, triggering an exponential
+                // flurry of WhoList updates). Randomize between 1 and 10 seconds.
+                // The bug seems fixed but this timeout is a safety net.
+                let timeout = 1000 + parseInt(Math.random() * 10000)
+                setTimeout(this.sendMe, timeout);
             }
         },
 
@@ -1448,6 +1456,9 @@ export default {
             if (this.webcam.autoshare) {
                 this.startVideo({ force: true });
             }
+
+            // Send the server our current status and video setting.
+            this.sendMe(true);
         },
 
         /**

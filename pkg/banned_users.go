@@ -22,7 +22,7 @@ var (
 )
 
 // BanUser adds a user to the ban list.
-func BanUser(username string, duration time.Duration) {
+func (s *Server) BanUser(username string, duration time.Duration) {
 	banListMu.Lock()
 	defer banListMu.Unlock()
 	banList[username] = Ban{
@@ -70,4 +70,15 @@ func IsBanned(username string) bool {
 		}
 	}
 	return ok
+}
+
+// BanExpires returns the time.Duration string until the user's ban expires.
+func BanExpires(username string) string {
+	banListMu.RLock()
+	defer banListMu.RUnlock()
+	ban, ok := banList[username]
+	if ok {
+		return time.Until(ban.ExpiresAt).String()
+	}
+	return ""
 }

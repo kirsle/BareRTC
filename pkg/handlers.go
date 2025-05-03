@@ -12,6 +12,7 @@ import (
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/messages"
 	"git.kirsle.net/apps/barertc/pkg/models"
+	"git.kirsle.net/apps/barertc/pkg/spam"
 	"git.kirsle.net/apps/barertc/pkg/util"
 )
 
@@ -78,8 +79,9 @@ func (s *Server) OnLogin(sub *Subscriber, msg messages.Message) {
 	// Is the username currently banned?
 	if IsBanned(msg.Username) {
 		sub.ChatServer(
-			"You are currently banned from entering the chat room. Chat room bans are temporarily and usually last for " +
-				"24 hours. Please try coming back later.",
+			"You are currently banned from entering the chat room. Chat room bans are temporary and usually last for "+
+				"24 hours.<br><br>Your ban expires in: %s",
+			BanExpires(msg.Username),
 		)
 		sub.SendJSON(messages.Message{
 			Action: messages.ActionKick,
@@ -197,6 +199,46 @@ func (s *Server) OnMessage(sub *Subscriber, msg messages.Message) {
 
 	// Is this a DM?
 	if strings.HasPrefix(msg.Channel, "@") {
+
+		// Check the message for hyperlink spam: if one user is copy/pasting a link to too many others
+		// over DMs (possibly trying to evade detection from moderators), kick or ban them from chat.
+		if err := spam.LinkSpamManager.Check(sub.Username, msg.Channel, msg.Message); err != nil {
+			log.Error("Username %s has spammed a link too often (most recently to %s): %s", sub.Username, msg.Channel, msg.Message)
+
+			var (
+				isBan = err == spam.ErrLinkSpamBanUser
+
+				// For the admin report.
+				report   = "The user was **kicked** from the room with a warning."
+				username = sub.Username
+			)
+			if isBan {
+				report = "The user was **banned** from chat."
+				s.BanUser(sub.Username, config.Current.DMLinkSpamProtection.BanHours*time.Hour)
+			}
+
+			s.KickUser(sub, err.Error(), isBan)
+
+			// Send an admin report to your main website.
+			if err := PostWebhookReport(WebhookRequestReport{
+				FromUsername:  username,
+				AboutUsername: username,
+				Channel:       msg.Channel,
+				Timestamp:     time.Now().Format(time.RFC3339),
+				Reason:        "Spam Detected",
+				Message: fmt.Sprintf(
+					"_In a DM to:_ %s<br>[%s] %s",
+					msg.Channel,
+					username,
+					msg.Message,
+				),
+				Comment: report,
+			}); err != nil {
+				log.Error("Error delivering a report to your website about the /nsfw command by %s: %s", sub.Username, err)
+			}
+			return
+		}
+
 		// Echo the message only to both parties.
 		s.SendTo(sub.Username, message)
 		message.Channel = "@" + sub.Username

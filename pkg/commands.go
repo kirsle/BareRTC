@@ -208,20 +208,8 @@ func (s *Server) KickCommand(words []string, sub *Subscriber) {
 	} else if other.Username == sub.Username {
 		sub.ChatServer("/kick: did you really mean to kick yourself?")
 	} else {
-		other.ChatServer("You have been kicked from the chat room by %s", sub.Username)
-		other.SendJSON(messages.Message{
-			Action: messages.ActionKick,
-		})
-		other.authenticated = false
-		other.Username = ""
+		s.KickUser(other, fmt.Sprintf("You have been kicked from the chat room by %s", sub.Username), false)
 		sub.ChatServer("%s has been kicked from the room", username)
-
-		// Broadcast it to everyone.
-		s.Broadcast(messages.Message{
-			Action:   messages.ActionPresence,
-			Username: username,
-			Message:  messages.PresenceKicked,
-		})
 	}
 }
 
@@ -290,22 +278,11 @@ func (s *Server) BanCommand(words []string, sub *Subscriber) {
 	log.Info("Operator %s bans %s for %d hours", sub.Username, username, duration/time.Hour)
 
 	// Add them to the ban list.
-	BanUser(username, duration)
+	s.BanUser(username, duration)
 
 	// If the target user is currently online, disconnect them and broadcast the ban to everybody.
 	if other, err := s.GetSubscriber(username); err == nil {
-		s.Broadcast(messages.Message{
-			Action:   messages.ActionPresence,
-			Username: username,
-			Message:  messages.PresenceBanned,
-		})
-
-		other.ChatServer("You have been banned from the chat room by %s. You may come back after %d hours.", sub.Username, duration/time.Hour)
-		other.SendJSON(messages.Message{
-			Action: messages.ActionKick,
-		})
-		other.authenticated = false
-		other.Username = ""
+		s.KickUser(other, fmt.Sprintf("You have been banned from the chat room by %s. You may come back after %d hours.", sub.Username, duration/time.Hour), true)
 	}
 
 	sub.ChatServer("%s has been banned from the room for %d hours.", username, duration/time.Hour)
