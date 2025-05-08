@@ -30,6 +30,7 @@ func (h *BotHandlers) SetUserVariables(msg messages.Message) {
 		"name":      username,
 		"isAdmin":   "false",
 		"messageID": fmt.Sprint(msg.MessageID),
+		"channelID": msg.Channel,
 	}
 
 	// Set global variables.
