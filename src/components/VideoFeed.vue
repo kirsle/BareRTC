@@ -41,7 +41,7 @@ export default {
         },
         muteButtonClass() {
             let classList = [
-                'button is-small ml-1 px-2',
+                'button is-small ml-1 p-2',
             ]
 
             if (this.isMuted) {
@@ -49,6 +49,11 @@ export default {
             } else {
                 classList.push('is-success is-outlined');
             }
+
+            if (!this.mouseOver) {
+                classList.push('seethru');
+            }
+
             return classList.join(' ');
         },
         muteIconClass() {
