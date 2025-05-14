@@ -3408,7 +3408,8 @@ export default {
                         @mute-video="muteMe()"
                         @popout="popoutVideo"
                         @open-profile="showProfileModal"
-                        @set-volume="setVideoVolume">
+                        @set-volume="setVideoVolume"
+                        @modal-alert="modalAlert">
                     </VideoFeed>
 
                     <!-- Others' videos -->
@@ -3428,7 +3429,8 @@ export default {
                         @popout="popoutVideo"
                         @close-video="expresslyCloseVideo"
                         @set-volume="setVideoVolume"
-                        @open-profile="showProfileModal">
+                        @open-profile="showProfileModal"
+                        @modal-alert="modalAlert">
                     </VideoFeed>
 
                     <!-- Debugging - copy a lot of these to simulate more videos -->

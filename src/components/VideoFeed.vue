@@ -113,6 +113,21 @@ export default {
                 this.$emit('set-volume', this.username, this.volume);
             }, 200);
         },
+
+        // Show info about the watermark when the corner one is clicked.
+        showWatermarkInfo() {
+            this.$emit('modal-alert', {
+                icon: "fa-solid fa-qrcode",
+                title: "What are the QR codes on webcams?",
+                message: "This QR code is a safety feature to deter people from wanting to screen record webcams on chat. " +
+                    "The QR code contains the current viewer's username, the website's name, and the current date/time. The " +
+                    "idea is that if a webcam is recorded and then leaked online, the QR code would connect it directly back to who exactly " +
+                    "recorded it, and when.\n\n" +
+                    "There are two QR codes on each video: the one in the bottom-right corner is intentionally made visible and obvious " +
+                    "to everybody, and a second (subtle) copy of the code spans across the center/middle of the video and pulsates in " +
+                    "transparency over time.",
+            });
+        }
     }
 }
 </script>
@@ -132,8 +147,8 @@ export default {
 
         <!-- Watermark layer -->
         <div v-if="watermarkImage">
-            <img :src="watermarkImage" class="watermark">
-            <img :src="watermarkImage" class="corner-watermark seethru invert-color">
+            <img :src="watermarkImage" class="watermark" oncontextmenu="return false">
+            <img :src="watermarkImage" class="corner-watermark seethru invert-color" @click="showWatermarkInfo()" oncontextmenu="return false">
         </div>
 
         <!-- Caption -->
@@ -236,6 +251,7 @@ video {
     min-width: 32px;
     min-height: 32px;
     max-height: 20%;
+    cursor: pointer;
 }
 .invert-color {
     filter: invert(100%);
@@ -244,7 +260,7 @@ video {
 /* Animate the primary watermark to pulsate in opacity */
 @keyframes subtle-pulsate {
     0% { opacity: 0.02; }
-    50% { opacity: 0.04; }
+    50% { opacity: 0.06; }
     100% { opacity: 0.02; }
 }
 </style>
