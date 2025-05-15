@@ -27,7 +27,16 @@ export default {
 
             // Mouse over status
             mouseOver: false,
+
+            // Mutation Observer, to detect if the user deletes the QR code via dev tools.
+            observer: null,
         };
+    },
+    mounted() {
+        this.initWatermarkObserver();
+    },
+    beforeUnmount() {
+        this.observer?.disconnect();
     },
     computed: {
         containerID() {
@@ -132,13 +141,37 @@ export default {
                     "to everybody, and a second (subtle) copy of the code spans across the center/middle of the video and pulsates in " +
                     "transparency over time.",
             });
-        }
+        },
+
+        // Mutation Observer to detect if the watermark is tampered with by the viewer.
+        initWatermarkObserver() {
+            const $container = this.$refs.videoContainer,
+                $watermark = this.$refs.watermarkImage,
+                $smallImage = this.$refs.watermarkSmallImage;
+
+            if (!$container || !$watermark || !$smallImage) return;
+
+            this.observer = new MutationObserver(() => {
+                const stillPresent = $container.contains($watermark) && $container.contains($smallImage);
+                if (!stillPresent) {
+                    this.onWatermarkRemoved();
+                }
+            });
+
+            this.observer.observe($container, {
+                childList: true,
+                subtree: true,
+            });
+        },
+        onWatermarkRemoved() {
+            this.$emit('watermark-removed', this.username);
+        },
     }
 }
 </script>
 
 <template>
-    <div class="feed" :id="containerID" :class="{
+    <div class="feed" ref="videoContainer" :id="containerID" :class="{
         'popped-out': poppedOut,
         'popped-in': !poppedOut,
     }" @mouseover="mouseOver = true" @mouseleave="mouseOver = false">
@@ -151,9 +184,9 @@ export default {
             :muted="localVideo"></video>
 
         <!-- Watermark layer -->
-        <div v-if="watermarkImage">
-            <img :src="watermarkImage" class="watermark" oncontextmenu="return false">
-            <img :src="watermarkImage" class="corner-watermark seethru invert-color" @click="showWatermarkInfo()" oncontextmenu="return false">
+        <div>
+            <img :src="watermarkImage" class="watermark" ref="watermarkImage" oncontextmenu="return false">
+            <img :src="watermarkImage" class="corner-watermark seethru invert-color" ref="watermarkSmallImage" @click="showWatermarkInfo()" oncontextmenu="return false">
         </div>
 
         <!-- Caption -->

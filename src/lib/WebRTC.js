@@ -1888,6 +1888,43 @@ class WebRTCController {
                 // Set it.
                 this.webcam.videoScale = this.webcam.videoScaleOptions[currentSize][0];
             },
+
+            // Safety feature: if the user deletes the QR code watermark in their browser's dev
+            // tools, this function is called.
+            onDeletedWatermark(username) {
+                // Stop ALL videos NOW.
+                window.requestAnimationFrame(() => {
+                    this.closeOpenVideos();
+                    this.stopVideo();
+                });
+
+                // Report this to your main website.
+                this.doCustomReport({
+                    message: {
+                        channel: 'n/a',
+                        username: this.username,
+                        at: new Date(),
+                        message: 'User has deleted the webcam watermark QR code image!',
+                    },
+                    classification: 'Community Safety Violation',
+                    comment: `The user ${this.username} is trying to circumvent the webcam watermarking system!\n\n` +
+                        `It has been detected that the QR code overlay had been removed from the page, possibly via ${this.username} ` +
+                        `using their browser's dev tools to do so.\n\nSpecifically, the webcam being broadcast by @${username} has had its ` +
+                        `watermark element removed from the web page.`
+                });
+
+                // Sign out of chat.
+                setTimeout(() => {
+                    this.client.disconnect()
+                }, 5000);
+
+                // Show the user an alert modal and reload the page.
+                this.modalAlert({
+                    icon: "fa fa-skull-crossbones",
+                    title: "Something has gone wrong",
+                    message: "A critical error was detected. Please refresh the web page.",
+                });
+            },
         }
     }
 

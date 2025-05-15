@@ -3409,7 +3409,8 @@ export default {
                         @popout="popoutVideo"
                         @open-profile="showProfileModal"
                         @set-volume="setVideoVolume"
-                        @modal-alert="modalAlert">
+                        @modal-alert="modalAlert"
+                        @watermark-removed="onDeletedWatermark">
                     </VideoFeed>
 
                     <!-- Others' videos -->
@@ -3430,7 +3431,8 @@ export default {
                         @close-video="expresslyCloseVideo"
                         @set-volume="setVideoVolume"
                         @open-profile="showProfileModal"
-                        @modal-alert="modalAlert">
+                        @modal-alert="modalAlert"
+                        @watermark-removed="onDeletedWatermark">
                     </VideoFeed>
 
                     <!-- Debugging - copy a lot of these to simulate more videos -->
