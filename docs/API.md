@@ -50,6 +50,46 @@ The return schema looks like:
 }
 ```
 
+## POST /api/amend-jwt
+
+This endpoint allows your main website to amend the JWT token for a user who may already be logged into the chat room.
+
+For example, you can post a new JWT token for them that has a new nickname, avatar image URL, or provides new chat moderation rules that you want to take effect immediately for them in the chat room, rather than wait for them to log in again with a new JWT token.
+
+The `Username` parameter should target their current username (which they may be currently logged into chat with), and the JWTToken is a new token to be delivered to them which they will update their page with (to apply new chat rules, etc.).
+
+Notes:
+
+* If the Username is not currently online, the endpoint will return a Not Found error saying such.
+* If the Username did not log in via a JWT token originally, the new JWT token will not be given to them.
+* The new JWT token must be correctly signed with your secret key, the same as a normal login JWT token.
+* It is possible to change the user's username with this endpoint: the "Username" parameter targets their current (old) username, and the JWT token may contain a new username.
+    * **Important:** It is up to your main website to ensure the new username will not conflict with somebody else already in the chat room. It is undefined behavior if their username is set to one identical to another user on chat.
+    * Changing their username may disrupt Direct Message threads other people have open with them: their web page will show the old username as offline, and they would need to find and start a new DM thread to continue chatting. So it is not recommended to update their username with this API although it is possible to.
+
+When the username is found on chat (and was JWT authenticated originally), the chat server will:
+
+1. Send them a 'ping' message with the new JWT token and rules struct.
+2. Send them a 'me' message with their (new?) username.
+3. Broadcast a Who List update so any change to their nickname, profile picture, VIP status, etc. will update for everybody.
+
+```json
+{
+    "APIKey": "from settings.toml",
+    "Username": "alice",
+    "JWTToken": "new.jwt.token"
+}
+```
+
+The return schema looks like:
+
+```json
+{
+    "OK": true,
+    "Error": "error string, omitted if none"
+}
+```
+
 ## POST /api/shutdown
 
 Shut down (and hopefully, reboot) the chat server. It is equivalent to the `/shutdown` operator command issued in chat, but callable from your web application. It is also used as part of deadlock detection on the BareBot chatbot.

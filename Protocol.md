@@ -94,6 +94,20 @@ Just a keep-alive message to prevent the WebSocket connection from closing.
 }
 ```
 
+When the server sends a ping to a user who authenticated via JWT token, it will also provide a refreshed JWT token with an updated expiration date (in case the user is disconnected, so they can log back in gracefully), along with a mapping of the chat moderation rules in their token. Example:
+
+```javascript
+{
+    "action": "ping",
+    "jwt": "new.jwt.token",
+    "jwtRules": {
+        "IsRedCamRule": false,
+        "IsNoVideoRule": false,
+        //...
+    }
+}
+```
+
 ## Error
 
 Sent by: Server.

@@ -30,6 +30,7 @@ class ChatClient {
         onUnwatch,
         onBlock,
         onCut,
+        onPing,
 
         // Misc function registrations for callback.
         onLoggedIn, // connection is fully established (first 'me' echo from server).
@@ -62,6 +63,7 @@ class ChatClient {
         this.onUnwatch = onUnwatch;
         this.onBlock = onBlock;
         this.onCut = onCut;
+        this.onPing = onPing;
 
         this.onLoggedIn = onLoggedIn;
         this.onNewJWT = onNewJWT;
@@ -234,6 +236,7 @@ class ChatClient {
                 if (msg.jwt) {
                     this.onNewJWT(msg.jwt);
                 }
+                this.onPing(msg);
 
                 // Reset disconnect retry counter: if we were on long enough to get
                 // a ping, we're well connected and can reconnect no matter how many

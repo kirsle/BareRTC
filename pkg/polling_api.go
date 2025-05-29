@@ -188,17 +188,7 @@ func (s *Server) PollingAPI() http.HandlerFunc {
 			// JWT once in a while. Equivalent to the WebSockets pinger channel.
 			if time.Since(sub.lastPollJWT) > PingInterval {
 				sub.lastPollJWT = time.Now()
-
-				if sub.JWTClaims != nil {
-					if jwt, err := sub.JWTClaims.ReSign(); err != nil {
-						log.Error("ReSign JWT token for %s#%d: %s", sub.Username, sub.ID, err)
-					} else {
-						sub.SendJSON(messages.Message{
-							Action:   messages.ActionPing,
-							JWTToken: jwt,
-						})
-					}
-				}
+				sub.SendPing()
 			}
 
 			enc.Encode(sub.FlushPollResponse())

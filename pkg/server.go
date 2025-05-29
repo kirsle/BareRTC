@@ -59,6 +59,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/api/block/now", s.BlockNow())
 	mux.Handle("/api/disconnect/now", s.DisconnectNow())
 	mux.Handle("/api/authenticate", s.Authenticate())
+	mux.Handle("/api/amend-jwt", s.AmendJWT())
 	mux.Handle("/api/shutdown", s.ShutdownAPI())
 	mux.Handle("/api/profile", s.UserProfile())
 	mux.Handle("/api/message/history", s.MessageHistory())

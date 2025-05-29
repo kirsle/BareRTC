@@ -1418,6 +1418,7 @@ export default {
                 onUnwatch: this.onUnwatch,
                 onBlock: this.onBlock,
                 onCut: this.onCut,
+                onPing: this.onPing,
 
                 bulkMuteUsers: this.bulkMuteUsers,
                 focusMessageBox: () => {
@@ -1459,6 +1460,25 @@ export default {
 
             // Send the server our current status and video setting.
             this.sendMe(true);
+        },
+        onPing(msg) {
+            // Updated JWT chat moderation rules?
+            if (msg.jwtRules) {
+                this.jwt.rules = msg.jwtRules;
+
+                // Enforce them now.
+                if (this.jwt.rules.IsNoBroadcastRule && this.webcam.active) {
+                    this.stopVideo();
+                }
+
+                if (this.jwt.rules.IsNoVideoRule) {
+                    this.closeOpenVideos();
+                }
+
+                if (this.jwt.rules.IsRedCamRule && this.webcam.active && !this.webcam.nsfw) {
+                    this.webcam.nsfw = true;
+                }
+            }
         },
 
         /**

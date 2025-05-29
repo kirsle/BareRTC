@@ -198,7 +198,6 @@ func (s *Server) Authenticate() http.HandlerFunc {
 func (s *Server) ShutdownAPI() http.HandlerFunc {
 	type request struct {
 		APIKey string
-		Claims jwt.Claims
 	}
 
 	type result struct {
@@ -270,6 +269,127 @@ func (s *Server) ShutdownAPI() http.HandlerFunc {
 				Message:  "The chat server is going down for a reboot NOW!",
 			})
 		}()
+	})
+}
+
+// Amend JWT (/api/amend-jwt) token for a user who may be logged into chat.
+//
+// This endpoint allows your website to send updates to a user's JWT token, such
+// as to change chat moderator rules or to swap their profile picture URL or
+// change their nickname/username.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//		{
+//			"APIKey": "from settings.toml",
+//	     "Username": "alice",
+//	     "JWTToken": "new.jwt.token"
+//		}
+//
+// The "Username" should match the username they currently would have in the
+// chat room, and the JWT token is a new auth token to replace their current
+// JWT with. You can change any properties in the new JWT token. For example,
+// if you include a new username in the JWT token, the chat server will rename
+// them (this will probably interrupt their DM threads people have open with
+// them, however).
+//
+// The return schema looks like:
+//
+//	{
+//		"OK": true,
+//		"Error": "error string, omitted if none",
+//	}
+func (s *Server) AmendJWT() http.HandlerFunc {
+	type request struct {
+		APIKey   string
+		Username string
+		JWTToken string
+	}
+
+	type result struct {
+		OK    bool
+		Error string `json:",omitempty"`
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Validate the API key.
+		if params.APIKey != config.Current.AdminAPIKey {
+			w.WriteHeader(http.StatusUnauthorized)
+			enc.Encode(result{
+				Error: "Authentication denied.",
+			})
+			return
+		}
+
+		// Validate the newly given JWT token.
+		var claims *jwt.Claims
+		if parsed, ok, err := jwt.ParseAndValidate(params.JWTToken); err != nil || !ok {
+			w.WriteHeader(http.StatusUnauthorized)
+			enc.Encode(result{
+				Error: "Invalid JWT token.",
+			})
+			return
+		} else {
+			claims = parsed
+		}
+
+		// Look for this username on chat.
+		sub, err := s.GetSubscriber(params.Username)
+		if err != nil {
+			w.WriteHeader(http.StatusNotFound)
+			enc.Encode(result{
+				Error: fmt.Sprintf("Username %s is not logged in", params.Username),
+			})
+			return
+		}
+
+		// If the subscriber is JWT authenticated, send them the new token.
+		if sub.JWTClaims != nil {
+			sub.JWTClaims = claims
+			sub.SendPing()
+			sub.SendMe()
+			s.SendWhoList()
+		}
+
+		// Send the response.
+		enc.Encode(result{
+			OK: true,
+		})
 	})
 }
 

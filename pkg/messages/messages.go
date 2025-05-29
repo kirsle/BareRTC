@@ -64,6 +64,9 @@ type Message struct {
 	// Sent on `echo` actions to condense multiple messages into one packet.
 	Messages []Message `json:"messages,omitempty"`
 
+	// Sent on `ping` messages (along with updated JWTToken)
+	JWTRules map[string]bool `json:"jwtRules,omitempty"`
+
 	// WebRTC negotiation messages: proxy their signaling messages
 	// between the two users to negotiate peer connection.
 	Candidate   string `json:"candidate,omitempty"`   // candidate

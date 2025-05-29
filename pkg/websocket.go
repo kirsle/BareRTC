@@ -8,7 +8,6 @@ import (
 
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/log"
-	"git.kirsle.net/apps/barertc/pkg/messages"
 	"git.kirsle.net/apps/barertc/pkg/util"
 	"nhooyr.io/websocket"
 )
@@ -52,20 +51,7 @@ func (s *Server) WebSocket() http.HandlerFunc {
 					return
 				}
 			case <-pinger.C:
-				// Send a ping, and a refreshed JWT token if the user sent one.
-				var token string
-				if sub.JWTClaims != nil {
-					if jwt, err := sub.JWTClaims.ReSign(); err != nil {
-						log.Error("ReSign JWT token for %s#%d: %s", sub.Username, sub.ID, err)
-					} else {
-						token = jwt
-					}
-				}
-
-				sub.SendJSON(messages.Message{
-					Action:   messages.ActionPing,
-					JWTToken: token,
-				})
+				sub.SendPing()
 			case <-ctx.Done():
 				pinger.Stop()
 				return
