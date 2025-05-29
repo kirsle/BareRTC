@@ -6,6 +6,7 @@ export default {
         title: String,
         icon: String,
         message: String,
+        backgroundDismissable: Boolean,
     },
     data() {
         return {
@@ -32,14 +33,19 @@ export default {
         },
         close() {
             this.$emit('close');
-        }
+        },
+        backgroundClicked() {
+            if (this.backgroundDismissable) {
+                this.close();
+            }
+        },
     }
 }
 </script>
 
 <template>
     <div class="modal" :class="{ 'is-active': visible }">
-        <div class="modal-background"></div>
+        <div class="modal-background" @click="backgroundClicked()"></div>
 
         <div class="modal-content">
             <div class="card">

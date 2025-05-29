@@ -221,6 +221,7 @@ export default {
                 title: "Alert",
                 icon: "",
                 message: "",
+                backgroundDismissable: false,
                 callback() {},
             },
 
@@ -1486,7 +1487,7 @@ export default {
          */
 
         // Generic window.alert replacement modal.
-        async modalAlert({ message, title="Alert", icon="", isConfirm=false }) {
+        async modalAlert({ message, title="Alert", icon="", isConfirm=false, backgroundDismissable=false }) {
             return new Promise((resolve, reject) => {
                 this.alertModal.isConfirm = isConfirm;
                 this.alertModal.title = title;
@@ -1495,6 +1496,7 @@ export default {
                 this.alertModal.callback = () => {
                     resolve();
                 };
+                this.alertModal.backgroundDismissable = backgroundDismissable;
                 this.alertModal.visible = true;
             });
         },
@@ -2409,6 +2411,7 @@ export default {
         :title="alertModal.title"
         :icon="alertModal.icon"
         :message="alertModal.message"
+        :background-dismissable="alertModal.backgroundDismissable"
         @callback="alertModal.callback"
         @close="modalClose()"></AlertModal>
 
@@ -3315,7 +3318,7 @@ export default {
                             Ignore unsolicited DMs
 
                             <a href="#"
-                                @click.prevent="modalAlert({title: 'About Ignoring Unsolicited DMs', message: 'When this box is checked, your DMs will be closed to new conversations and the button for others to send you a DM will be greyed out/disabled.\n\nYou may still initiate new DMs with others yourself, and continue conversations with people who you already have DM threads open with.'})"
+                                @click.prevent="modalAlert({title: 'About Ignoring Unsolicited DMs', message: 'When this box is checked, your DMs will be closed to new conversations and the button for others to send you a DM will be greyed out/disabled.\n\nYou may still initiate new DMs with others yourself, and continue conversations with people who you already have DM threads open with.', backgroundDismissable: true})"
                                 class="fa fa-info-circle ml-2">
                             </a>
                         </label>
