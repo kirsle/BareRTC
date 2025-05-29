@@ -10,7 +10,7 @@ func (sub *Subscriber) SendPing() {
 	// Send a ping, and a refreshed JWT token if the user sent one.
 	var (
 		token string
-		rules map[string]bool
+		rules = map[string]bool{}
 	)
 	if sub.JWTClaims != nil {
 		if jwt, err := sub.JWTClaims.ReSign(); err != nil {
