@@ -663,6 +663,12 @@ class WebRTCController {
                 this.playSound("Watch");
             },
             onUnwatch(msg) {
+                this.DebugChannel(`<strong>BareRTC Unwatch</strong> received from: ${msg.username}<br><br>` +
+                    `Current watching: ${JSON.stringify(Object.keys(this.webcam.watching))}<br>` +
+                    `Was in watch list: ${this.webcam.watching[msg.username] == undefined ? 'NO!' : 'YES'}<br>` +
+                    `My camera is: ${this.webcam.active ? 'active': 'not active'}`,
+                );
+
                 // The user has closed our video feed.
                 delete (this.webcam.watching[msg.username]);
                 this.playSound("Unwatch");
