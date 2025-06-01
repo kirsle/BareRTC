@@ -75,6 +75,7 @@ class WebRTCController {
                 mutualOpen: false, // user wants to open video mutually
                 nonExplicit: false, // user prefers not to see explicit cameras
                 vipOnly: false, // only show camera to fellow VIP users
+                noWatermark: false, // user opts out of their own QR code watermark
                 rememberExpresslyClosed: true,  // remember cams we expressly closed
                 autoMuteWebcams: false, // auto-mute other cameras' audio channels
 
@@ -247,6 +248,12 @@ class WebRTCController {
                     }
                 }
             },
+            "webcam.noWatermark": function () {
+                LocalStorage.set('videoNoWatermark', this.webcam.noWatermark);
+                if (this.webcam.active) {
+                    this.sendMe();
+                }
+            },
             "webcam.rememberExpresslyClosed": function () {
                 LocalStorage.set('rememberExpresslyClosed', this.webcam.rememberExpresslyClosed);
             },
@@ -273,6 +280,7 @@ class WebRTCController {
                 if (this.webcam.mutualOpen) status |= this.VideoFlag.MutualOpen;
                 if (this.webcam.nonExplicit) status |= this.VideoFlag.NonExplicit;
                 if (this.webcam.vipOnly && this.isVIP) status |= this.VideoFlag.VipOnly;
+                if (this.webcam.noWatermark) status |= this.VideoFlag.NoWatermark;
                 return status;
             },
             anyVideosOpen() {
@@ -669,9 +677,13 @@ class WebRTCController {
                     `My camera is: ${this.webcam.active ? 'active': 'not active'}`,
                 );
 
+                // If the user leaves our watching list, play the sound.
+                if (this.webcam.watching[msg.username] != undefined) {
+                    this.playSound("Unwatch");
+                }
+
                 // The user has closed our video feed.
                 delete (this.webcam.watching[msg.username]);
-                this.playSound("Unwatch");
                 this.cleanupPeerConnections();
             },
             sendWatch(username, watching) {
@@ -697,6 +709,14 @@ class WebRTCController {
                 // returns true if the username is broadcasting and NSFW, false otherwise.
                 // (used for the color coding of their nickname on their video box - so assumed they are broadcasting)
                 if (this.whoMap[username] != undefined && this.whoMap[username].video & this.VideoFlag.NSFW) {
+                    return true;
+                }
+                return false;
+            },
+
+            isUsernameCamNoWatermark(username) {
+                // returns true if the user is broadcasting and has the NoWatermark flag set.
+                if (this.whoMap[username] != undefined && this.whoMap[username].video & this.VideoFlag.NoWatermark) {
                     return true;
                 }
                 return false;

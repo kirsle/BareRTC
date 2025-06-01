@@ -8,6 +8,7 @@ const VideoFlag = {
     MutualOpen: 1 << 5,
     VipOnly: 1 << 6,
     Invited: 1 << 7,
+    NoWatermark: 1 << 8,
 };
 
 export default VideoFlag;

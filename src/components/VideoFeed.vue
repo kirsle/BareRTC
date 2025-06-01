@@ -13,6 +13,7 @@ export default {
         isFrozen: Boolean,     // video is detected as frozen
         isSpeaking: Boolean,   // video is registering audio
         watermarkImage: Image, // watermark image to overlay (nullable)
+        isNoWatermark: Boolean, // camera does not want watermark protection
     },
     components: {
         Slider,
@@ -137,9 +138,8 @@ export default {
                     "The QR code contains the current viewer's username, the website's name, and the current date/time. The " +
                     "idea is that if a webcam is recorded and then leaked online, the QR code would connect it directly back to who exactly " +
                     "recorded it, and when.\n\n" +
-                    "There are two QR codes on each video: the one in the bottom-right corner is intentionally made visible and obvious " +
-                    "to everybody, and a second (subtle) copy of the code spans across the center/middle of the video and pulsates in " +
-                    "transparency over time.",
+                    "Notice: if you do not care about this risk, you may remove the QR code from *your own* video so that it doesn't get " +
+                    "in the way of the action when other people watch your camera. This setting can be found in the Chat Settings 'Webcam' tab.",
                 backgroundDismissable: true,
             });
         },
@@ -185,7 +185,7 @@ export default {
             :muted="localVideo"></video>
 
         <!-- Watermark layer -->
-        <div>
+        <div :class="{'is-no-watermark': isNoWatermark}">
             <img :src="watermarkImage" class="watermark" ref="watermarkImage" oncontextmenu="return false">
             <img :src="watermarkImage" class="corner-watermark seethru invert-color" ref="watermarkSmallImage" @click="showWatermarkInfo()" oncontextmenu="return false">
         </div>
@@ -268,6 +268,9 @@ video {
 }
 
 /* Watermark image */
+.is-no-watermark {
+    display: none;
+}
 .watermark {
     position: absolute;
     top: 0;

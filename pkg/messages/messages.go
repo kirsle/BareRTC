@@ -140,6 +140,7 @@ const (
 	VideoFlagMutualOpen                     // viewer wants to auto-open viewers' cameras
 	VideoFlagOnlyVIP                        // can only shows as active to VIP members
 	VideoFlagInvited                        // user invites another to watch their camera
+	VideoFlagNoWatermark                    // user opts out of QR code watermark protection
 )
 
 // Presence message templates.

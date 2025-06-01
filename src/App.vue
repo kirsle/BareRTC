@@ -739,6 +739,9 @@ export default {
             if (settings.autoMuteWebcams === true) {
                 this.webcam.autoMuteWebcams = true;
             }
+            if (settings.videoNoWatermark === true) {
+                this.webcam.noWatermark = true;
+            }
 
             // Misc preferences
             if (settings.usePolling != undefined) {
@@ -2726,13 +2729,6 @@ export default {
                             Camera Settings
                         </h3>
 
-                        <p class="block mb-1 is-size-7">
-                            The settings on this tab will be relevant only when you are already
-                            broadcasting your camera. They allow you to modify your broadcast settings
-                            while you are already live (for example, to change your mutual camera
-                            preference or select another audio/video device to broadcast from).
-                        </p>
-
                         <p class="block mb-1" v-if="config.permitNSFW">
                             <label class="label">Explicit webcam options</label>
                         </p>
@@ -2839,7 +2835,7 @@ export default {
                             </div>
                         </div>
 
-                        <p class="block mb-1" v-if="webcam.videoDevices.length > 0">
+                        <p class="block mb-1">
                             <label class="label">Miscellaneous</label>
                         </p>
 
@@ -2852,6 +2848,18 @@ export default {
                                 Note: be sure that your web browser has <strong>remembered</strong> your webcam and mic
                                 permission! This option can automatically share your webcam when you log onto chat again
                                 from this device.
+                            </p>
+                        </div>
+
+                        <div class="field mb-1">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.noWatermark">
+                                Do not protect my video from screen recording
+                            </label>
+                            <p class="help">
+                                The <i class="fa fa-qrcode"></i> QR codes are a safety feature against people screen recording your camera.
+                                If you accept that risk, this setting can remove the QR code from <em>your own</em> webcam.
+                                <a href="/about#watermarks" target="_blank">Learn more <i class="fa fa-external-link"></i></a>
                             </p>
                         </div>
                     </div>
@@ -3428,6 +3436,7 @@ export default {
                         :is-source-muted="webcam.muted"
                         :is-speaking="WebRTC.speaking[username]"
                         :watermark-image="webcam.watermark"
+                        :is-no-watermark="webcam.noWatermark"
                         @mute-video="muteMe()"
                         @popout="popoutVideo"
                         @open-profile="showProfileModal"
@@ -3448,6 +3457,7 @@ export default {
                         :is-watching-me="isWatchingMe(username)"
                         :is-frozen="WebRTC.frozenStreamDetected[username]"
                         :watermark-image="webcam.watermark"
+                        :is-no-watermark="isUsernameCamNoWatermark(username)"
                         @reopen-video="openVideoByUsername"
                         @mute-video="muteVideo"
                         @popout="popoutVideo"
