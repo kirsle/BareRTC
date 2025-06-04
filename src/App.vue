@@ -3191,7 +3191,7 @@ export default {
                     <!-- NSFW toggle button -->
                     <button type="button" v-if="webcam.active && config.permitNSFW" class="button is-small px-1 ml-1"
                         :class="{
-                            'is-outlined is-dark': !webcam.nsfw,
+                            'is-outlined is-link has-text-dark': !webcam.nsfw,
                             'is-danger': webcam.nsfw
                         }" @click.prevent="topNavExplicitButtonClicked()"
                         :title="webcam.nonExplicit ? 'You prefer non-Explicit cameras so you can not go Explicit' : 'Toggle the NSFW setting for your camera broadcast'"

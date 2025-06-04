@@ -305,10 +305,10 @@ video {
     25% { opacity: 0.05; }
     50% { opacity: 0.02; }
     75% { opacity: 0.05; }
-    90% { opacity: 0.1 }
-    91% { opacity: 0.2; filter: invert(0%); }
-    95% { opacity: 0.2; filter: invert(100%); }
-    99% { opacity: 0.1; filter: invert(0%); }
+    90% { opacity: 0.06 }
+    91% { opacity: 0.08; filter: invert(0%); }
+    95% { opacity: 0.08; filter: invert(100%); }
+    99% { opacity: 0.06; filter: invert(0%); }
     100% { opacity: 0.02; }
 }
 </style>
