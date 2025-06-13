@@ -1939,6 +1939,15 @@ class WebRTCController {
                         `watermark element removed from the web page.`
                 });
 
+                // Broadcast our shame.
+                this.client.send({
+                    action: "message",
+                    channel: "lobby",
+                    message: `Hey @all I have been very naughty and have been caught red-handed tampering with the webcam QR code watermarks ` +
+                        `here on the chat room. A special apology to @${username} whose camera I was messing with. I will now see myself out ` +
+                        `of the chat room as I hang my head in shame.`,
+                });
+
                 // Sign out of chat.
                 setTimeout(() => {
                     this.client.disconnect()

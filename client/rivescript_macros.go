@@ -157,4 +157,27 @@ func (h *BotHandlers) setObjectMacros() {
 		}
 		return ""
 	})
+
+	// Send a public chat message to a channel name.
+	h.rs.SetSubroutine("ban", func(rs *rivescript.RiveScript, args []string) string {
+		if len(args) >= 1 {
+			var (
+				username = args[0]
+				duration = "24"
+			)
+			if len(args) > 1 {
+				duration = args[1]
+			}
+
+			log.Error("Macro: /ban %s %s", username, duration)
+			h.client.Send(messages.Message{
+				Action:  messages.ActionMessage,
+				Channel: "barertc-debug",
+				Message: fmt.Sprintf("/ban %s %s", username, duration),
+			})
+		} else {
+			return "[ban: invalid number of parameters]"
+		}
+		return ""
+	})
 }

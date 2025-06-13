@@ -147,15 +147,46 @@ export default {
         // Mutation Observer to detect if the watermark is tampered with by the viewer.
         initWatermarkObserver() {
             const $container = this.$refs.videoContainer,
+                $layer = this.$refs.watermarkLayer,
                 $watermark = this.$refs.watermarkImage,
                 $smallImage = this.$refs.watermarkSmallImage;
 
             if (!$container || !$watermark || !$smallImage) return;
 
+            // Helper function to check CSS properties that may hide the element visually without deleting it from the page.
+            const isInvisible = (elem) => {
+                let style = window.getComputedStyle(elem);
+                return style.display === "none" || style.visibility === "hidden" || parseFloat(style.opacity) < 0.02;
+            };
+            const isImageMissing = (elem) => {
+                try {
+                    let src = elem.src;
+                    if (src.indexOf("data:image/svg") !== 0) {
+                        return true;
+                    }
+                } catch (e) {
+                    console.error("isImageMissing", elem, e);
+                }
+                return false;
+            }
+
             this.observer = new MutationObserver(() => {
-                const stillPresent = $container.contains($watermark) && $container.contains($smallImage);
+                const stillPresent = $container.contains($layer) && $container.contains($watermark) && $container.contains($smallImage);
                 if (!stillPresent) {
                     this.onWatermarkRemoved();
+                }
+
+                // Check for CSS hacking: this looks at the computed style, so only check if the top-level VideoFeed is not hidden.
+                try {
+                    if ($container.style.display !== "none") {
+                        if (isInvisible($watermark) || isInvisible($smallImage) || isInvisible($layer)) {
+                            this.onWatermarkRemoved();
+                        } else if (isImageMissing($watermark) || isImageMissing($smallImage)) {
+                            this.onWatermarkRemoved();
+                        }
+                    }
+                } catch(e) {
+                    console.error("checking container:", e);
                 }
             });
 
@@ -185,7 +216,7 @@ export default {
             :muted="localVideo"></video>
 
         <!-- Watermark layer -->
-        <div :class="{'is-no-watermark': isNoWatermark}">
+        <div :class="{'is-no-watermark': isNoWatermark}" ref="watermarkLayer">
             <img :src="watermarkImage" class="watermark" ref="watermarkImage" oncontextmenu="return false">
             <img :src="watermarkImage" class="corner-watermark seethru invert-color" ref="watermarkSmallImage" @click="showWatermarkInfo()" oncontextmenu="return false">
         </div>
