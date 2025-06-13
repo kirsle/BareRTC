@@ -316,6 +316,9 @@ export default {
                                 class="has-text-grey">
                                 @{{ message.username }}
                             </a>
+
+                            <!-- User badges -->
+                            <sup v-if="user.op" class="fa fa-peace ml-1 has-text-warning is-size-7"></sup>
                         </small>
                         <small v-else class="has-text-grey">internal</small>
                     </div>
@@ -511,8 +514,12 @@ export default {
 
                         <small class="has-text-grey"
                             :class="{ 'ml-1': appearance === 'compact' && nickname !== message.username, 'strikethru': isOffline }"
-                            v-if="!(message.isChatServer || message.isChatClient || message.isAdmin)">@{{ message.username
-                            }}</small>
+                            v-if="!(message.isChatServer || message.isChatClient || message.isAdmin)">
+                            @{{ message.username}}
+
+                            <!-- User badges -->
+                            <sup v-if="user.op" class="fa fa-peace has-text-warning is-size-7"></sup>
+                        </small>
                     </a>]
                 </strong>
 
