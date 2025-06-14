@@ -1918,12 +1918,6 @@ class WebRTCController {
             // Safety feature: if the user deletes the QR code watermark in their browser's dev
             // tools, this function is called.
             onDeletedWatermark(username) {
-                // Stop ALL videos NOW.
-                window.requestAnimationFrame(() => {
-                    this.closeOpenVideos();
-                    this.stopVideo();
-                });
-
                 // Report this to your main website.
                 this.doCustomReport({
                     message: {
@@ -1948,17 +1942,7 @@ class WebRTCController {
                         `of the chat room as I hang my head in shame.`,
                 });
 
-                // Sign out of chat.
-                setTimeout(() => {
-                    this.client.disconnect()
-                }, 5000);
-
-                // Show the user an alert modal and reload the page.
-                this.modalAlert({
-                    icon: "fa fa-skull-crossbones",
-                    title: "Something has gone wrong",
-                    message: "A critical error was detected. Please refresh the web page.",
-                });
+                this.panic();
             },
         }
     }

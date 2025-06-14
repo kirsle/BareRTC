@@ -2150,6 +2150,37 @@ export default {
         setupIdleDetection() {
             window.addEventListener("keypress", this.deidle);
             window.addEventListener("mousemove", this.deidle);
+
+            // Also launch an interval to test for dev tools being open.
+            let inter = setInterval(() => {
+                const minimumTimeout = 100,
+                    before = new Date().getTime();
+
+                if (this.connected && !this.isOp) {
+                    // eslint-disable-next-line no-debugger
+                    debugger;
+                }
+
+                const after = new Date().getTime();
+                if (after - before > minimumTimeout) {
+                    this.ChatClient(`Dev tools detected!`);
+                    clearInterval(inter);
+
+                    this.doCustomReport({
+                        message: {
+                            channel: 'n/a',
+                            username: this.username,
+                            at: new Date(),
+                            message: 'User has opened their browser dev tools!',
+                        },
+                        classification: 'Community Safety Violation',
+                        comment: `The user ${this.username} has opened their browser dev tools on chat, ` +
+                            `which may indicate they are trying to reverse engineer or mess with the page!`
+                    });
+
+                    this.panic();
+                }
+            }, 100);
         },
 
         // Common "de-idle" event handler
@@ -2402,6 +2433,30 @@ export default {
             // A fully custom report, e.g. for the Ban Modal.
             this.reportModal.message = message;
             this.doReport({ classification, comment });
+        },
+
+        // Panic (critical error), triggered when the user seems to be messing around
+        // with their browser's dev tools.
+        panic() {
+            // Stop ALL videos NOW.
+            window.requestAnimationFrame(() => {
+                this.closeOpenVideos();
+                this.stopVideo();
+            });
+
+            // Sign out of chat.
+            setTimeout(() => {
+                this.client.disconnect()
+            }, 5000);
+
+            // Show the user an alert modal and reload the page.
+            setTimeout(() => {
+                this.modalAlert({
+                    icon: "fa fa-skull-crossbones",
+                    title: "Something has gone wrong",
+                    message: "A critical error was detected. Please refresh the web page.",
+                });
+            }, 100);
         },
     }
 };
