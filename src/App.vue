@@ -680,6 +680,12 @@ export default {
         },
     },
     methods: {
+
+        breakpoint() {
+            // eslint-disable-next-line no-debugger
+            debugger;
+        },
+
         // Load user prefs from localStorage, called on startup
         setupConfig() {
             const settings = LocalStorage.getSettings();
@@ -2157,8 +2163,7 @@ export default {
                     before = new Date().getTime();
 
                 if (this.connected && !this.isOp) {
-                    // eslint-disable-next-line no-debugger
-                    debugger;
+                    this.breakpoint();
                 }
 
                 const after = new Date().getTime();
