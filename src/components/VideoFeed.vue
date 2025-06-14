@@ -31,10 +31,17 @@ export default {
 
             // Mutation Observer, to detect if the user deletes the QR code via dev tools.
             observer: null,
+
+            // Window resize debouncer: temporarily hide videos after a resize event, so e.g.,
+            // if dev tools are opened and the debugger detector kicks in, videos may be hidden
+            // while the page is paused.
+            windowResizeTimer: null,
+            windowResizeCooldown: false,
         };
     },
     mounted() {
         this.initWatermarkObserver();
+        this.initWindowResizer();
     },
     beforeUnmount() {
         this.observer?.disconnect();
@@ -201,6 +208,20 @@ export default {
         onWatermarkRemoved() {
             this.$emit('watermark-removed', this.username);
         },
+        initWindowResizer() {
+            window.addEventListener('resize', this.onWindowResized);
+        },
+        onWindowResized() {
+            if (this.windowResizeTimer !== null) {
+                clearTimeout(this.windowResizeTimer);
+            }
+
+            this.windowResizeCooldown = true;
+            this.windowResizeTimer = setTimeout(() => {
+                this.windowResizeCooldown = false;
+                this.windowResizetimer = null;
+            }, 1000);
+        },
     }
 }
 </script>
@@ -216,7 +237,8 @@ export default {
             disablepictureinpicture
             playsinline
             oncontextmenu="return false;"
-            :muted="localVideo"></video>
+            :muted="localVideo"
+            :class="{'invisible': windowResizeCooldown}"></video>
 
         <!-- Watermark layer -->
         <div :class="{'is-no-watermark': isNoWatermark}" ref="watermarkLayer">
@@ -299,6 +321,9 @@ video {
 /* Translucent controls until mouse over */
 .seethru {
     opacity: 0.4;
+}
+.invisible {
+    visibility: hidden;
 }
 
 /* Watermark image */
