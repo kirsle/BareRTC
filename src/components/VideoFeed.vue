@@ -177,12 +177,15 @@ export default {
                 }
 
                 // Check for CSS hacking: this looks at the computed style, so only check if the top-level VideoFeed is not hidden.
+                // TODO: this may generate false positives on some browsers, more testing needed.
                 try {
                     if ($container.style.display !== "none") {
                         if (isInvisible($watermark) || isInvisible($smallImage) || isInvisible($layer)) {
-                            this.onWatermarkRemoved();
+                            console.error("Watermark CSS appears hidden");
+                            // this.onWatermarkRemoved();
                         } else if (isImageMissing($watermark) || isImageMissing($smallImage)) {
-                            this.onWatermarkRemoved();
+                            console.error("Watermark img src appears missing");
+                            // this.onWatermarkRemoved();
                         }
                     }
                 } catch(e) {
