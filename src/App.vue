@@ -2459,7 +2459,9 @@ export default {
                 this.modalAlert({
                     icon: "fa fa-skull-crossbones",
                     title: "Something has gone wrong",
-                    message: "A critical error was detected. Please refresh the web page.",
+                    message: "A critical error was detected. Please refresh the web page.\n\n" +
+                        "If you experience this problem frequently, please contact a chat moderator for assistance " +
+                        "and let them know what you were doing (if anything) before this error occurred.",
                 });
             }, 100);
         },
