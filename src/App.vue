@@ -54,6 +54,7 @@ export default {
             disconnect: false,    // don't try to reconnect (e.g. kicked)
             windowFocused: true,  // browser tab is active
             windowFocusedAt: new Date(),
+            appStartTime: new Date(),
 
             // Disconnect spamming: don't retry too many times.
             disconnectLimit: 2,
@@ -2168,15 +2169,32 @@ export default {
 
                 const after = new Date().getTime();
                 if (after - before > minimumTimeout) {
-                    this.ChatClient(`Dev tools detected!`);
                     clearInterval(inter);
+
+                    let uptime = (after - this.appStartTime.getTime()) / 1000,
+                        uptimeStr = "",
+                        vids = this.numVideosOpen,
+                        ua = navigator.userAgent,
+                        delta = after - before;
+                    if (uptime > 3600) {
+                        uptimeStr = `${(uptime / 3600).toFixed(2)}h`;
+                    } else if (uptime > 60) {
+                        uptimeStr = `${(uptime / 60).toFixed(2)}m`;
+                    } else {
+                        uptimeStr = `${uptime.toFixed(2)}s`;
+                    }
 
                     this.doCustomReport({
                         message: {
                             channel: 'n/a',
                             username: this.username,
                             at: new Date(),
-                            message: 'User has opened their browser dev tools!',
+                            message: 'User has opened their browser dev tools!\n\n' +
+                                `* Delta time in devtools check: ${delta}ms\n` +
+                                `* Web page uptime: ${uptimeStr} (${parseInt(uptime)}s)\n` +
+                                `* Our camera active: ${this.webcam.active ? 'YES' : 'NO'}\n` +
+                                `* Videos open: ${vids}\n` +
+                                `* User Agent: ${ua}`,
                         },
                         classification: 'Community Safety Violation',
                         comment: `The user ${this.username} has opened their browser dev tools on chat, ` +
