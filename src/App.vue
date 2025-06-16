@@ -2160,7 +2160,7 @@ export default {
 
             // Also launch an interval to test for dev tools being open.
             let inter = setInterval(() => {
-                const minimumTimeout = 100,
+                const minimumTimeout = 400,
                     before = new Date().getTime();
 
                 if (this.connected && !this.isOp) {
