@@ -54,6 +54,8 @@ export default {
             disconnect: false,    // don't try to reconnect (e.g. kicked)
             windowFocused: true,  // browser tab is active
             windowFocusedAt: new Date(),
+            windowResizeTimer: null,
+            windowResizeCooldown: false,
             appStartTime: new Date(),
 
             // Disconnect spamming: don't retry too many times.
@@ -296,6 +298,16 @@ export default {
         // making the chat panel the current screen again on phone rotation.
         window.addEventListener("resize", () => {
             this.resetResponsiveCSS();
+
+            if (this.windowResizeTimer !== null) {
+                clearTimeout(this.windowResizeTimer);
+            }
+
+            this.windowResizeCooldown = true;
+            this.windowResizeTimer = setTimeout(() => {
+                this.windowResizeCooldown = false;
+                this.windowResizeTimer = null;
+            }, 1000);
         });
 
         // Listen for window focus/unfocus events. Being on a different browser tab, for
@@ -2175,7 +2187,8 @@ export default {
                         uptimeStr = "",
                         vids = this.numVideosOpen,
                         ua = navigator.userAgent,
-                        delta = after - before;
+                        delta = after - before,
+                        resized = this.windowResizeCooldown;
                     if (uptime > 3600) {
                         uptimeStr = `${(uptime / 3600).toFixed(2)}h`;
                     } else if (uptime > 60) {
@@ -2191,6 +2204,7 @@ export default {
                             at: new Date(),
                             message: 'User has opened their browser dev tools!\n\n' +
                                 `* Delta time in devtools check: ${delta}ms\n` +
+                                `* Window resized recently: ${resized ? 'YES - Dev tools more likely!' : 'NO - Dev tools less likely or undocked'}\n` +
                                 `* Web page uptime: ${uptimeStr} (${parseInt(uptime)}s)\n` +
                                 `* Our camera active: ${this.webcam.active ? 'YES' : 'NO'}\n` +
                                 `* Videos open: ${vids}\n` +
