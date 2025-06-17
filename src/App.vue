@@ -2181,7 +2181,6 @@ export default {
 
                 const after = new Date().getTime();
                 if (after - before > minimumTimeout) {
-                    clearInterval(inter);
 
                     let uptime = (after - this.appStartTime.getTime()) / 1000,
                         uptimeStr = "",
@@ -2196,6 +2195,11 @@ export default {
                     } else {
                         uptimeStr = `${uptime.toFixed(2)}s`;
                     }
+
+                    // Low risk
+                    if (vids === 0 && !resized) return;
+
+                    clearInterval(inter);
 
                     this.doCustomReport({
                         message: {
