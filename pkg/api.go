@@ -764,6 +764,7 @@ func (s *Server) UserProfile() http.HandlerFunc {
 	type result struct {
 		OK            bool
 		Error         string         `json:",omitempty"`
+		Headline      string         `json:",omitempty"`
 		ProfileFields []profileField `json:",omitempty"`
 	}
 

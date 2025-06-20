@@ -71,6 +71,7 @@ The expected response from your endpoint should follow this format:
     "Data": {
         "OK": true,
         "Error": "any error messaging (omittable if no errors)",
+        "Headline": "Optional profile headline text",
         "ProfileFields": [
             {
                 "Name": "Age",
@@ -85,3 +86,5 @@ The expected response from your endpoint should follow this format:
     }
 }
 ```
+
+If the Headline field is provided from your site, it will be shown above the profile fields in a banner.

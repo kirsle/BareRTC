@@ -27,6 +27,7 @@ export default {
             busy: false,
 
             // Profile data
+            headline: "",
             profileFields: [],
 
             // Ban account data
@@ -139,6 +140,8 @@ export default {
                     this.error = data.Error;
                     return;
                 }
+
+                this.headline = data.Headline ? data.Headline : "";
 
                 if (data.ProfileFields != undefined) {
                     this.profileFields = data.ProfileFields;
@@ -466,8 +469,16 @@ export default {
                         </div>
                     </div>
 
+                    <!-- Headline (optional) -->
+                    <div v-if="headline" class="mt-3 is-size-7 notification is-info is-light py-1 px-2 mb-3" style="display: table; table-layout: fixed; width: 100%">
+                        <div style="display: table-cell; white-space: nowrap; text-overflow: ellipsis; overflow: hidden" :title="headline">
+                            <span>{{headline}}</span>
+                        </div>
+                    </div>
+                    <div v-else class="mt-4"></div>
+
                     <!-- Login At -->
-                    <div class="mt-3 is-size-7">
+                    <div class="is-size-7">
                         <div class="columns is-multiline is-mobile">
                             <div class="column is-half">
                                 <em>Online since: {{ onlineSince }}</em>
@@ -487,7 +498,7 @@ export default {
                     </div>
 
                     <!-- Profile Fields spinner/error -->
-                    <div class="notification is-info is-light p-2 my-2" v-if="busy">
+                    <div class="notification is-success is-light p-2 my-2" v-if="busy">
                         <i class="fa fa-spinner fa-spin mr-2"></i>
                         Loading profile details...
                     </div>
