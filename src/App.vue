@@ -261,6 +261,13 @@ export default {
                 username: "",
             },
 
+            photoShareModal: {
+                visible: false,
+                file: null,       // File handle from upload
+                previewImg: null, // Image src for preview modal
+                bytes: null,      // Bytes to send to server
+            },
+
             messageHistoryModal: {
                 visible: false,
             },
@@ -1997,12 +2004,52 @@ export default {
                 let dt = e.dataTransfer;
                 let file = dt.files[0];
 
-                this.onFileUpload(file);
+                this.onFileSelected(file);
             });
         },
 
         // Common file selection handler for drag/drop or manual upload.
-        onFileUpload(file) {
+        onFileSelected(file) {
+            // Show the share modal so the user previews before posting it.
+
+            // Validate they can upload it here.
+            if (!this.canUploadFile) {
+                this.ChatClient("Photo sharing in this channel is not available.");
+                return;
+            }
+
+            // Get image file data.
+            let reader = new FileReader();
+            let rawData = new ArrayBuffer();
+            reader.addEventListener("load", () => {
+                rawData = reader.result;
+
+                let fileByteArray = [],
+                    u8array = new Uint8Array(rawData);
+                for (let i = 0; i < u8array.length; i++) {
+                    fileByteArray.push(u8array[i]);
+                }
+
+                // Show the modal.
+                this.photoShareModal.file = file;
+                this.photoShareModal.previewImg = URL.createObjectURL(file);
+                this.photoShareModal.bytes = fileByteArray;
+                this.photoShareModal.visible = true;
+            });
+
+            reader.readAsArrayBuffer(file);
+        },
+        closePhotoShareModal() {
+            this.photoShareModal.file = null;
+            this.photoShareModal.previewImg = null;
+            this.photoShareModal.bytes = null;
+            this.photoShareModal.visible = false;
+        },
+        onFileUpload() {
+            const file = this.photoShareModal.file,
+                bytes = this.photoShareModal.bytes;
+            this.closePhotoShareModal();
+
             // Validate they can upload it here.
             if (!this.canUploadFile) {
                 this.ChatClient("Photo sharing in this channel is not available.");
@@ -2024,27 +2071,12 @@ export default {
 
             this.ChatClient(`<em>Uploading file to chat: ${file.name} - ${file.size} bytes, ${file.type} format.</em>`);
 
-            // Get image file data.
-            let reader = new FileReader();
-            let rawData = new ArrayBuffer();
-            reader.onload = e => {
-                rawData = e.target.result;
+            // Attach the file to the message.
+            msg.message = file.name;
+            msg.bytes = bytes;
 
-                let fileByteArray = [],
-                    u8array = new Uint8Array(rawData);
-                for (let i = 0; i < u8array.length; i++) {
-                    fileByteArray.push(u8array[i]);
-                }
-
-                // Attach the file to the message.
-                msg.message = file.name;
-                msg.bytes = fileByteArray;
-
-                // Send it to the chat server.
-                this.client.send(msg);
-            };
-
-            reader.readAsArrayBuffer(file);
+            // Send it to the chat server.
+            this.client.send(msg);
         },
 
         // The image upload button handler.
@@ -2054,7 +2086,7 @@ export default {
             input.accept = 'image/*';
             input.onchange = e => {
                 let file = e.target.files[0];
-                this.onFileUpload(file);
+                this.onFileSelected(file);
             };
             input.click();
         },
@@ -2525,6 +2557,46 @@ export default {
         <div class="modal-content">
             <div class="box content has-text-centered">
                 <h1><i class="fa fa-upload mr-2"></i> Drop image to share it on chat</h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo preview before share modal -->
+    <div class="modal" :class="{ 'is-active': photoShareModal.visible }">
+        <div class="modal-background"></div>
+        <div class="modal-content">
+            <div class="card">
+                <header class="card-header has-background-info">
+                    <p class="card-header-title">
+                        <i class="fa fa-image mr-2"></i>
+                        Share a Photo
+                    </p>
+                </header>
+                <div class="card-content">
+
+                    <p class="block">
+                        Sharing to channel:
+                        {{ this.channelName }}
+                    </p>
+
+                    <!-- Preview image -->
+                    <div class="columns is-centered is-mobile">
+                        <div class="column is-half">
+                            <img :src="photoShareModal.previewImg">
+                        </div>
+                    </div>
+                </div>
+                <footer class="card-footer">
+                    <div class="card-footer-item">
+                        <button type="button" class="button is-primary" @click="onFileUpload()">
+                            Share Photo
+                        </button>
+
+                        <button type="button" class="button ml-2" @click="closePhotoShareModal()">
+                            Cancel
+                        </button>
+                    </div>
+                </footer>
             </div>
         </div>
     </div>
