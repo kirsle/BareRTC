@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 18
+var currentVersion = 19
 
 // Config for your BareRTC app.
 type Config struct {
@@ -34,6 +34,7 @@ type Config struct {
 	AdminAPIKey     string
 	PermitNSFW      bool
 	BlockableAdmins bool
+	AnnounceKicks   bool `toml:"" comment:"Broadcast presence messages for kicks and bans in chat. If false, kicked users will simply exit the room like normal."`
 
 	UseXForwardedFor bool
 
@@ -171,6 +172,7 @@ func DefaultConfig() Config {
 		WebSocketSendTimeout: 10,               // seconds
 		MaxImageWidth:        1280,
 		PreviewImageWidth:    360,
+		AnnounceKicks:        true,
 		PublicChannels: []Channel{
 			{
 				ID:   "lobby",

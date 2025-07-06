@@ -434,18 +434,20 @@ func (s *Server) SendTo(username string, msg messages.Message) error {
 // KickUser kicks a user from chat with a message.
 func (s *Server) KickUser(sub *Subscriber, message string, banned bool) {
 	// Broadcast it to everyone.
-	if banned {
-		s.Broadcast(messages.Message{
-			Action:   messages.ActionPresence,
-			Username: sub.Username,
-			Message:  messages.PresenceBanned,
-		})
-	} else {
-		s.Broadcast(messages.Message{
-			Action:   messages.ActionPresence,
-			Username: sub.Username,
-			Message:  messages.PresenceKicked,
-		})
+	if config.Current.AnnounceKicks {
+		if banned {
+			s.Broadcast(messages.Message{
+				Action:   messages.ActionPresence,
+				Username: sub.Username,
+				Message:  messages.PresenceBanned,
+			})
+		} else {
+			s.Broadcast(messages.Message{
+				Action:   messages.ActionPresence,
+				Username: sub.Username,
+				Message:  messages.PresenceKicked,
+			})
+		}
 	}
 
 	// Tell the user they were kicked.

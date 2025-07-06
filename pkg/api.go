@@ -680,7 +680,7 @@ func (s *Server) DisconnectNow() http.HandlerFunc {
 			if sub, err := s.GetSubscriber(username); err == nil {
 				// Broadcast to everybody that the user left the chat.
 				message := messages.PresenceExited
-				if params.Kick {
+				if params.Kick && config.Current.AnnounceKicks {
 					message = messages.PresenceKicked
 				}
 				s.Broadcast(messages.Message{
