@@ -5,56 +5,78 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/log"
 	"git.kirsle.net/apps/barertc/pkg/messages"
+	"gorm.io/gorm"
 )
 
 type DirectMessage struct {
-	MessageID int64
-	ChannelID string
-	Username  string
+	MessageID int64  `gorm:"primaryKey"`
+	ChannelID string `gorm:"index"`
+	Username  string `gorm:"index"`
 	Message   string
-	Timestamp int64
+	Timestamp int64          // deprecated
+	CreatedAt time.Time      `gorm:"index"`
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
 const DirectMessagePerPage = 20
 
-func (dm DirectMessage) CreateTable() error {
+// MigrateV2 upgrades the DirectMessage table for the V2 schema, where we switched
+// from using SQLite to GORM so we can optionally use Postgres instead.
+//
+// During this switch, we also deprecate the old Timestamp column in favor of CreatedAt.
+// This function will run in a background goroutine and update legacy rows to the new format.
+func (db DirectMessage) MigrateV2() {
+	// Find rows that need upgrading.
+	var page int
+	for {
+		page++
+		var rows = []*DirectMessage{}
+		res := DB.Model(&DirectMessage{}).Where(
+			"timestamp > 0",
+		).Limit(1000).Find(&rows)
+		if res.Error != nil {
+			log.Error("DirectMessage.MigrateV2: %s", res.Error)
+			return
+		}
+
+		if len(rows) == 0 {
+			break
+		}
+
+		log.Warn("DirectMessage.MigrateV2: Updating %d DMs (page %d)", len(rows), page)
+		for _, row := range rows {
+			var created = time.Unix(row.Timestamp, 0)
+			row.CreatedAt = created
+			row.Timestamp = 0
+			DB.Save(row)
+		}
+	}
+}
+
+// Init runs initialization tasks for the DMs table (migrate V2 and expire old rows).
+func (dm DirectMessage) Init() error {
 	if DB == nil {
 		return ErrNotInitialized
 	}
 
-	_, err := DB.Exec(`
-		CREATE TABLE IF NOT EXISTS direct_messages (
-			message_id INTEGER PRIMARY KEY,
-			channel_id TEXT,
-			username TEXT,
-			message TEXT,
-			timestamp INTEGER
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_direct_messages_channel_id ON direct_messages(channel_id);
-		CREATE INDEX IF NOT EXISTS idx_direct_messages_username ON direct_messages(username);
-		CREATE INDEX IF NOT EXISTS idx_direct_messages_timestamp ON direct_messages(timestamp);
-	`)
-	if err != nil {
-		return err
-	}
+	// Migrate old rows to the V2 schema.
+	dm.MigrateV2()
 
 	// Delete old messages past the retention period.
 	if days := config.Current.DirectMessageHistory.RetentionDays; days > 0 {
 		cutoff := time.Now().Add(time.Duration(-days) * 24 * time.Hour)
 		log.Info("Deleting old DM history past %d days (cutoff: %s)", days, cutoff.Format(time.RFC3339))
-		_, err := DB.Exec(
-			"DELETE FROM direct_messages WHERE timestamp < ?",
-			cutoff.Unix(),
+		res := DB.Exec(
+			"DELETE FROM direct_messages WHERE created_at IS NOT NULL AND created_at < ?",
+			cutoff,
 		)
-		if err != nil {
-			log.Error("Error removing old DMs: %s", err)
+		if res.Error != nil {
+			return fmt.Errorf("deleting old DMs past the cutoff period: %s", res.Error)
 		}
 	}
 
@@ -73,15 +95,15 @@ func (dm DirectMessage) LogMessage(fromUsername, toUsername string, msg messages
 
 	var (
 		channelID = CreateChannelID(fromUsername, toUsername)
-		timestamp = time.Now().Unix()
 	)
 
-	_, err := DB.Exec(`
-		INSERT INTO direct_messages (message_id, channel_id, username, message, timestamp)
-		VALUES (?, ?, ?, ?, ?)
-	`, msg.MessageID, channelID, fromUsername, msg.Message, timestamp)
-
-	return err
+	m := &DirectMessage{
+		MessageID: msg.MessageID,
+		ChannelID: channelID,
+		Username:  fromUsername,
+		Message:   msg.Message,
+	}
+	return DB.Create(&m).Error
 }
 
 // ClearMessages clears all stored DMs that the username as a participant in.
@@ -91,6 +113,7 @@ func (dm DirectMessage) ClearMessages(username string) (int, error) {
 	}
 
 	var placeholders = []interface{}{
+		time.Now(),
 		fmt.Sprintf("@%s:%%", username), // `@alice:%`
 		fmt.Sprintf("%%:@%s", username), // `%:@alice`
 		username,
@@ -99,25 +122,26 @@ func (dm DirectMessage) ClearMessages(username string) (int, error) {
 	// Count all the messages we'll delete.
 	var (
 		count int
-		row   = DB.QueryRow(`
+		row   = DB.Raw(`
 			SELECT COUNT(message_id)
 			FROM direct_messages
 			WHERE (channel_id LIKE ? OR channel_id LIKE ?)
 			OR username = ?
 		`, placeholders...)
 	)
-	if err := row.Scan(&count); err != nil {
-		return 0, err
+	if res := row.Scan(&count); res.Error != nil && false {
+		return 0, res.Error
 	}
 
 	// Delete them all.
-	_, err := DB.Exec(`
-		DELETE FROM direct_messages
+	res := DB.Exec(`
+		UPDATE direct_messages
+		SET deleted_at = ?
 		WHERE (channel_id LIKE ? OR channel_id LIKE ?)
 		OR username = ?
 	`, placeholders...)
 
-	return count, err
+	return count, res.Error
 }
 
 // TakebackMessage removes a message by its MID from the DM history.
@@ -135,7 +159,7 @@ func (dm DirectMessage) TakebackMessage(username string, messageID int64, isAdmi
 	// Does this messageID exist as sent by the user?
 	if !isAdmin {
 		var (
-			row = DB.QueryRow(
+			row = DB.Raw(
 				"SELECT message_id FROM direct_messages WHERE username = ? AND message_id = ?",
 				username, messageID,
 			)
@@ -148,13 +172,13 @@ func (dm DirectMessage) TakebackMessage(username string, messageID int64, isAdmi
 	}
 
 	// Delete it.
-	_, err := DB.Exec(
+	res := DB.Exec(
 		"DELETE FROM direct_messages WHERE message_id = ?",
 		messageID,
 	)
 
 	// Return that it was successfully validated and deleted.
-	return err == nil, err
+	return res.Error == nil, res.Error
 }
 
 // PaginateDirectMessages returns a page of messages, the count of remaining, and an error.
@@ -166,6 +190,7 @@ func PaginateDirectMessages(fromUsername, toUsername string, beforeID int64) ([]
 	var (
 		result    = []messages.Message{}
 		channelID = CreateChannelID(fromUsername, toUsername)
+		rows      = []*DirectMessage{}
 
 		// Compute the remaining messages after finding the final messageID this page.
 		lastMessageID int64
@@ -176,48 +201,34 @@ func PaginateDirectMessages(fromUsername, toUsername string, beforeID int64) ([]
 		beforeID = math.MaxInt64
 	}
 
-	rows, err := DB.Query(`
-		SELECT message_id, username, message, timestamp
-		FROM direct_messages
-		WHERE channel_id = ?
-		AND message_id < ?
-		ORDER BY message_id DESC
-		LIMIT ?
-	`, channelID, beforeID, DirectMessagePerPage)
-	if err != nil {
-		return nil, 0, err
+	res := DB.Model(&DirectMessage{}).Where(
+		"channel_id = ? AND message_id < ?",
+		channelID, beforeID,
+	).Order("message_id DESC").Limit(DirectMessagePerPage).Find(&rows)
+	if res.Error != nil {
+		return nil, 0, res.Error
 	}
 
-	for rows.Next() {
-		var row DirectMessage
-		if err := rows.Scan(
-			&row.MessageID,
-			&row.Username,
-			&row.Message,
-			&row.Timestamp,
-		); err != nil {
-			return nil, 0, err
-		}
-
+	for _, row := range rows {
 		msg := messages.Message{
 			MessageID: row.MessageID,
 			Username:  row.Username,
 			Message:   row.Message,
-			Timestamp: time.Unix(row.Timestamp, 0).Format(time.RFC3339),
+			Timestamp: row.CreatedAt.Format(time.RFC3339),
 		}
 		result = append(result, msg)
 		lastMessageID = msg.MessageID
 	}
 
 	// Get a count of the remaining messages.
-	row := DB.QueryRow(`
+	row := DB.Raw(`
 		SELECT COUNT(message_id)
 		FROM direct_messages
 		WHERE channel_id = ?
 		AND message_id < ?
 	`, channelID, lastMessageID)
-	if err := row.Scan(&remaining); err != nil {
-		return nil, 0, err
+	if res := row.Scan(&remaining); res.Error != nil {
+		return nil, 0, res.Error
 	}
 
 	return result, remaining, nil
@@ -226,7 +237,7 @@ func PaginateDirectMessages(fromUsername, toUsername string, beforeID int64) ([]
 // PaginateUsernames returns a page of usernames that the current user has conversations with.
 //
 // Returns the usernames, total count, pages, and error.
-func PaginateUsernames(fromUsername, sort string, page, perPage int) ([]string, int, int, error) {
+func PaginateUsernames(fromUsername, sortBy string, page, perPage int) ([]string, int, int, error) {
 	if DB == nil {
 		return nil, 0, 0, ErrNotInitialized
 	}
@@ -249,17 +260,15 @@ func PaginateUsernames(fromUsername, sort string, page, perPage int) ([]string, 
 		offset = 0
 	}
 
-	// Whitelist the sort strings.
-	switch sort {
+	switch sortBy {
 	case "a-z":
 		orderBy = "username ASC"
 	case "z-a":
 		orderBy = "username DESC"
 	case "oldest":
-		orderBy = "timestamp ASC"
+		orderBy = "newest_time ASC"
 	default:
-		// default = newest
-		orderBy = "timestamp DESC"
+		orderBy = "newest_time DESC"
 	}
 
 	// Get all our distinct channel IDs to filter the query down: otherwise doing an ORDER BY timestamp
@@ -274,49 +283,27 @@ func PaginateUsernames(fromUsername, sort string, page, perPage int) ([]string, 
 		return nil, 0, 0, errors.New("you have no direct messages stored on this chat server")
 	}
 
-	var (
-		cidPlaceholders = "?" + strings.Repeat(",?", len(channelIDs)-1)
-		params          = []interface{}{}
-	)
-	for _, cid := range channelIDs {
-		params = append(params, cid)
+	type record struct {
+		Username string
+		// NewestTime time.Time
+		// OldestTime time.Time
+	}
+	var records []record
+
+	// Get all usernames and their newest/oldest timestamps.
+	res := DB.Model(&DirectMessage{}).Select(`
+		username,
+		MAX(created_at) AS newest_time
+	`).Where(
+		"channel_id IN ? AND username <> ?",
+		channelIDs, fromUsername,
+	).Group("username").Order(orderBy).Offset(offset).Limit(perPage).Scan(&records)
+	if res.Error != nil {
+		return nil, 0, 0, res.Error
 	}
 
-	// Note: for some reason, the SQLite driver doesn't allow a parameterized
-	// query for ORDER BY (e.g. "ORDER BY ?") - so, since we have already
-	// whitelisted acceptable orders, use a Sprintf to interpolate that
-	// directly into the query.
-	queryStr := fmt.Sprintf(`
-		SELECT distinct(username)
-		FROM direct_messages
-		WHERE channel_id IN (%s)
-		AND username <> ?
-		ORDER BY %s
-		LIMIT ?
-		OFFSET ?`,
-		cidPlaceholders,
-		orderBy,
-	)
-	params = append(params, fromUsername, perPage, offset)
-	// fmt.Println(queryStr)
-	// fmt.Printf("%v\n", params)
-	rows, err := DB.Query(
-		queryStr,
-		params...,
-	)
-	if err != nil {
-		return nil, 0, 0, err
-	}
-
-	for rows.Next() {
-		var username string
-		if err := rows.Scan(
-			&username,
-		); err != nil {
-			return nil, 0, 0, err
-		}
-
-		result = append(result, username)
+	for _, row := range records {
+		result = append(result, row.Username)
 	}
 
 	// The count of distinct channel IDs earlier.
@@ -340,24 +327,14 @@ func GetDistinctChannelIDs(username string) ([]string, error) {
 		}
 	)
 
-	rows, err := DB.Query(`
-		SELECT distinct(channel_id)
-		FROM direct_messages
-		WHERE (
-			channel_id LIKE ?
-			OR channel_id LIKE ?
-		)
-	`, channelIDs[0], channelIDs[1])
-	if err != nil {
-		return nil, err
-	}
-
-	for rows.Next() {
-		var channelID string
-		if err := rows.Scan(&channelID); err != nil {
-			return nil, err
-		}
-		result = append(result, channelID)
+	res := DB.Model(&DirectMessage{}).Select(
+		"DISTINCT(channel_id)",
+	).Where(
+		"(channel_id LIKE ? OR channel_id LIKE ?)",
+		channelIDs[0], channelIDs[1],
+	).Scan(&result)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 
 	return result, nil

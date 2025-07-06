@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 17
+var currentVersion = 18
 
 // Config for your BareRTC app.
 type Config struct {
@@ -76,7 +76,9 @@ type VIP struct {
 
 type DirectMessageHistory struct {
 	Enabled           bool
+	DatabaseType      string `toml:"" comment:"Which database driver to use: sqlite3, postgres"`
 	SQLiteDatabase    string
+	PostgresDatabase  string
 	RetentionDays     int
 	DisclaimerMessage string
 }
@@ -243,7 +245,9 @@ func DefaultConfig() Config {
 		},
 		DirectMessageHistory: DirectMessageHistory{
 			Enabled:           false,
+			DatabaseType:      "sqlite3",
 			SQLiteDatabase:    "database.sqlite",
+			PostgresDatabase:  "host=localhost user=barertc password=barertc dbname=barertc sslmode=disable TimeZone=America/Los_Angeles",
 			RetentionDays:     90,
 			DisclaimerMessage: `<i class="fa fa-info-circle mr-1"></i> <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.`,
 		},

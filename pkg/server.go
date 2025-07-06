@@ -1,6 +1,7 @@
 package barertc
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -42,7 +43,17 @@ func NewServer() *Server {
 func (s *Server) Setup() error {
 	// Enable the SQLite database for DM history?
 	if config.Current.DirectMessageHistory.Enabled {
-		if err := models.Initialize(config.Current.DirectMessageHistory.SQLiteDatabase); err != nil {
+		var connstr string
+		switch config.Current.DirectMessageHistory.DatabaseType {
+		case "sqlite3":
+			connstr = config.Current.DirectMessageHistory.SQLiteDatabase
+		case "postgres":
+			connstr = config.Current.DirectMessageHistory.PostgresDatabase
+		default:
+			return fmt.Errorf("settings.toml: DirectMessageHistory: DatabaseType must be either sqlite or postgres")
+		}
+
+		if err := models.Initialize(config.Current.DirectMessageHistory.DatabaseType, connstr); err != nil {
 			log.Error("Error initializing SQLite database: %s", err)
 		}
 	}
