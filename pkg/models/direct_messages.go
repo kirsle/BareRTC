@@ -112,12 +112,18 @@ func (dm DirectMessage) ClearMessages(username string) (int, error) {
 		return 0, ErrNotInitialized
 	}
 
-	var placeholders = []interface{}{
-		time.Now(),
-		fmt.Sprintf("@%s:%%", username), // `@alice:%`
-		fmt.Sprintf("%%:@%s", username), // `%:@alice`
-		username,
-	}
+	var (
+		likes = []string{
+			fmt.Sprintf("@%s:%%", username), // `@alice:%`
+			fmt.Sprintf("%%:@%s", username), // `%:@alice`
+		}
+		placeholders = []interface{}{
+			time.Now(),
+			likes[0],
+			likes[1],
+			username,
+		}
+	)
 
 	// Count all the messages we'll delete.
 	var (
@@ -125,9 +131,11 @@ func (dm DirectMessage) ClearMessages(username string) (int, error) {
 		row   = DB.Raw(`
 			SELECT COUNT(message_id)
 			FROM direct_messages
-			WHERE (channel_id LIKE ? OR channel_id LIKE ?)
-			OR username = ?
-		`, placeholders...)
+			WHERE (
+				(channel_id LIKE ? OR channel_id LIKE ?)
+				OR username = ?
+			) AND deleted_at IS NULL
+		`, likes[0], likes[1], username)
 	)
 	if res := row.Scan(&count); res.Error != nil && false {
 		return 0, res.Error
