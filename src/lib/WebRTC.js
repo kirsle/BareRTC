@@ -657,9 +657,6 @@ class WebRTCController {
                 }).catch(this.DebugChannel);
             },
             onWatch(msg) {
-                // The user has our video feed open now.
-                if (this.isBootedAdmin(msg.username)) return;
-
                 // Notify in chat if this was the first watch (viewer may send multiple per each track they received)
                 if (this.prefs.watchNotif && this.webcam.watching[msg.username] != true) {
                     this.ChatServer(
@@ -1471,19 +1468,38 @@ class WebRTCController {
                 // Check if they are currently rate limited from pre-emptive boots of folks
                 // who are not even watching their camera yet.
                 if (this.rateLimitPreemptiveBoots(username, false)) return;
+
+                // Get the target user.
+                const user = this.getUser(username);
+
+                // The dialog message, which varies if the booted user is an admin.
+                let message = `Kick ${username} off your camera? `;
+                if (user.op) {
+                    message += "Note: chat operators will be able to reopen your webcam."
+                } else {
+                    message += `This will also prevent them from seeing that your camera `+
+                        ` is active for the remainder of your chat session.`
+                }
     
                 // Boot them off our webcam.
                 this.modalConfirm({
                     title: "Boot user",
                     icon: "fa fa-user-xmark",
-                    message: `Kick ${username} off your camera? This will also prevent them ` +
-                        `from seeing that your camera is active for the remainder of your ` +
-                        `chat session.`
+                    message: message,
                 }).then(() => {
                     // Ping their rate limiter.
                     if (this.rateLimitPreemptiveBoots(username, true)) return;
     
                     this.doBootUser(username);
+
+                    if (user.op) {
+                        this.ChatClient(
+                            `You have booted ${username}<sup class="fa fa-peace has-text-warning is-size-7"></sup> ` +
+                            `off your camera. <strong>Note:</strong> Chat operators ` +
+                            `will be able to reopen your webcam.`,
+                        );
+                        return;
+                    }
     
                     this.ChatClient(
                         `You have booted ${username} off your camera. They will no longer be able ` +
@@ -1509,6 +1525,12 @@ class WebRTCController {
                 delete (this.webcam.watching[username]);
             },
             isBooted(username) {
+
+                // Admins never count as booted.
+                if (this.isBootedAdmin(username)) {
+                    return false;
+                }
+
                 return this.WebRTC.booted[username] === true;
             },
             isBootedAdmin(username) {

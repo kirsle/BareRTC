@@ -551,15 +551,6 @@ func (s *Server) OnOpen(sub *Subscriber, msg messages.Message) {
 	secret := util.RandomString(16)
 	log.Info("WebRTC: %s opens %s with secret %s", sub.Username, other.Username, secret)
 
-	// If the current user is an admin and was booted or muted, inform them.
-	if sub.IsAdmin() {
-		if other.Boots(sub.Username) {
-			sub.ChatServer("Note: %s had booted you off their camera before, and won't be notified of your watch.", other.Username)
-		} else if other.Mutes(sub.Username) {
-			sub.ChatServer("Note: %s had muted you before, and won't be notified of your watch.", other.Username)
-		}
-	}
-
 	// Ring the target of this request and give them the secret.
 	other.SendJSON(messages.Message{
 		Action:     messages.ActionRing,
