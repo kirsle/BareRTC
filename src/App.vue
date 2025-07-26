@@ -701,11 +701,6 @@ export default {
     },
     methods: {
 
-        breakpoint() {
-            // eslint-disable-next-line no-debugger
-            debugger;
-        },
-
         // Load user prefs from localStorage, called on startup
         setupConfig() {
             const settings = LocalStorage.getSettings();
@@ -1662,9 +1657,14 @@ export default {
             if (!username) return false;
             return this.whoMap[username] != undefined && this.whoMap[username].dnd;
         },
-        leaveDM(channel) {
+        leaveDM(channel, $event) {
             // Validate we're in a DM currently.
             if (channel.indexOf("@") !== 0) return;
+
+            if ($event) {
+                $event.preventDefault();
+                $event.stopPropagation();
+            }
 
             this.modalConfirm({
                 title: "Close conversation thread",
@@ -2194,59 +2194,6 @@ export default {
         setupIdleDetection() {
             window.addEventListener("keypress", this.deidle);
             window.addEventListener("mousemove", this.deidle);
-
-            // Also launch an interval to test for dev tools being open.
-            let inter = setInterval(() => {
-                const minimumTimeout = 400,
-                    before = new Date().getTime();
-
-                if (this.connected && !this.isOp) {
-                    this.breakpoint();
-                }
-
-                const after = new Date().getTime();
-                if (after - before > minimumTimeout) {
-
-                    let uptime = (after - this.appStartTime.getTime()) / 1000,
-                        uptimeStr = "",
-                        vids = this.numVideosOpen,
-                        ua = navigator.userAgent,
-                        delta = after - before,
-                        resized = this.windowResizeCooldown;
-                    if (uptime > 3600) {
-                        uptimeStr = `${(uptime / 3600).toFixed(2)}h`;
-                    } else if (uptime > 60) {
-                        uptimeStr = `${(uptime / 60).toFixed(2)}m`;
-                    } else {
-                        uptimeStr = `${uptime.toFixed(2)}s`;
-                    }
-
-                    // Low risk
-                    if (vids === 0 && !resized) return;
-
-                    clearInterval(inter);
-
-                    this.doCustomReport({
-                        message: {
-                            channel: 'n/a',
-                            username: this.username,
-                            at: new Date(),
-                            message: 'User has opened their browser dev tools!\n\n' +
-                                `* Delta time in devtools check: ${delta}ms\n` +
-                                `* Window resized recently: ${resized ? 'YES - Dev tools more likely!' : 'NO - Dev tools less likely or undocked'}\n` +
-                                `* Web page uptime: ${uptimeStr} (${parseInt(uptime)}s)\n` +
-                                `* Our camera active: ${this.webcam.active ? 'YES' : 'NO'}\n` +
-                                `* Videos open: ${vids}\n` +
-                                `* User Agent: ${ua}`,
-                        },
-                        classification: 'Community Safety Violation',
-                        comment: `The user ${this.username} has opened their browser dev tools on chat, ` +
-                            `which may indicate they are trying to reverse engineer or mess with the page!`
-                    });
-
-                    this.panic();
-                }
-            }, 100);
         },
 
         // Common "de-idle" event handler
@@ -3453,7 +3400,7 @@ export default {
                                             <img v-else src="/static/img/shy.png" width="24" height="24">
                                         </div>
 
-                                        <div class="column">
+                                        <div class="column pr-0 pl-1 is-clipped">
                                             <div class="forcibly-truncate-wrapper forcibly-single-line" style="height: 24px">
                                                 <div class="forcibly-truncate-body">
                                                     <span v-if="c.unread" class="tag is-danger mr-1">
@@ -3466,6 +3413,12 @@ export default {
                                                     <span v-else>{{ c.name }}</span>
                                                 </div>
                                             </div>
+                                        </div>
+
+                                        <div class="column is-narrow px-0">
+                                            <a href="#" @click.prevent="leaveDM(c.channel, $event)" class="px-2 py-0 has-text-danger">
+                                                <i class="fa fa-xmark"></i>
+                                            </a>
                                         </div>
                                     </div>
 
@@ -3572,7 +3525,7 @@ export default {
                         <div class="column is-narrow" v-if="isDM">
                             <!-- DMs: Leave convo button -->
                             <button type="button" class="float-right button is-small is-warning is-outlined"
-                                @click="leaveDM(channel)">
+                                @click="leaveDM(channel, $event)">
                                 <i class="fa fa-trash"></i>
                             </button>
                         </div>

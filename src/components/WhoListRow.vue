@@ -144,7 +144,7 @@ export default {
                 </div>
             </a>
         </div>
-        <div class="column pr-0 is-clipped" :class="{ 'pl-1': avatarURL }">
+        <div class="column pr-0 pl-1 is-clipped">
             <strong class="truncate-text-line is-size-7 cursor-pointer"
                 @click="openProfile()">
                 {{ user.username }}
