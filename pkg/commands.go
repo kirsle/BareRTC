@@ -3,6 +3,7 @@ package barertc
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -62,6 +63,7 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg messages.Message) bool {
 				"* `/bans` to list current banned users and their expiration date\n" +
 				"* `/nsfw <username>` to mark their camera NSFW\n" +
 				"* `/cut <username>` to make them turn off their camera\n" +
+				"* `/insights [username]` to get insights on user behavior (aggregate top scores if no username given)\n" +
 				"* `/help` to show this message\n" +
 				"* `/help-advanced` to show advanced admin commands\n\n" +
 				"Note: shell-style quoting is supported, if a username has a space in it, quote the whole username, e.g.: `/kick \"username 2\"`",
@@ -96,6 +98,9 @@ func (s *Server) ProcessCommand(sub *Subscriber, msg messages.Message) bool {
 			return true
 		case "/deop":
 			s.DeopCommand(words, sub)
+			return true
+		case "/insights":
+			s.InsightsCommand(words, sub)
 			return true
 		}
 
@@ -384,4 +389,157 @@ func (s *Server) DeopCommand(words []string, sub *Subscriber) {
 
 		sub.ChatServer("Operator rights have been taken from %s", username)
 	}
+}
+
+// InsightsCommand handles the `/insights [username]` operator command.
+func (s *Server) InsightsCommand(words []string, sub *Subscriber) {
+
+	// For a specific username?
+	if len(words) > 1 {
+		username := strings.TrimPrefix(words[1], "@")
+		user, err := s.GetSubscriber(username)
+		if err != nil {
+			sub.ChatServer("/insights: user %s was not found.", username)
+			return
+		}
+
+		// Get their insights.
+		user.muteMu.RLock()
+		var (
+			boots    = stringMapToSortedList(user.booted)
+			blocks   = stringMapToSortedList(user.blocked)
+			mutes    = stringMapToSortedList(user.muted)
+			watching = stringMapToSortedList(user.watching)
+			watchers = stringMapToSortedList(user.watchers)
+		)
+		user.muteMu.RUnlock()
+
+		// Respond.
+		sub.ChatServerMarkdown(
+			`**Insights about user @%s**`+"\n\n"+
+				`* Booted from their cam: <abbr title="%s">%d</abbr>`+"\n"+
+				`* Muted users: <abbr title="%s">%d</abbr>`+"\n"+
+				`* Cams they are watching: <abbr title="%s">%d</abbr>`+"\n"+
+				`* People watching their cam: <abbr title="%s">%d</abbr>`+"\n"+
+				`* Blocked users (main website): %d`,
+			username,
+			strings.Join(boots, ", "), len(boots),
+			strings.Join(mutes, ", "), len(mutes),
+			strings.Join(watching, ", "), len(watching),
+			strings.Join(watchers, ", "), len(watchers),
+			len(blocks),
+		)
+		return
+	}
+
+	// Getting aggregate data from all users.
+	type insight struct {
+		Username string
+		Boots    int
+		Mutes    int
+		Watching int
+		Watchers int
+	}
+
+	var (
+		subscribers = s.IterSubscribers()
+		insights    = []insight{}
+	)
+
+	for _, sub := range subscribers {
+		if !sub.authenticated {
+			continue
+		}
+
+		// Get their insights.
+		sub.muteMu.RLock()
+		var (
+			boots    = stringMapToSortedList(sub.booted)
+			mutes    = stringMapToSortedList(sub.muted)
+			watching = stringMapToSortedList(sub.watching)
+			watchers = stringMapToSortedList(sub.watchers)
+		)
+		sub.muteMu.RUnlock()
+
+		insights = append(insights, insight{
+			Username: sub.Username,
+			Boots:    len(boots),
+			Mutes:    len(mutes),
+			Watching: len(watching),
+			Watchers: len(watchers),
+		})
+	}
+
+	// Sort them by top metrics.
+	var byMetrics = []struct {
+		Name  string
+		Sort  func(i, j int) bool
+		Value func(i insight) int
+	}{
+		{
+			Name: "Most boots",
+			Sort: func(i, j int) bool {
+				return insights[i].Boots > insights[j].Boots
+			},
+			Value: func(i insight) int {
+				return i.Boots
+			},
+		},
+		{
+			Name: "Mutes the most people",
+			Sort: func(i, j int) bool {
+				return insights[i].Mutes > insights[j].Mutes
+			},
+			Value: func(i insight) int {
+				return i.Mutes
+			},
+		},
+		{
+			Name: "Most cameras open",
+			Sort: func(i, j int) bool {
+				return insights[i].Watching > insights[j].Watching
+			},
+			Value: func(i insight) int {
+				return i.Watching
+			},
+		},
+		{
+			Name: "Biggest audience on their cam",
+			Sort: func(i, j int) bool {
+				return insights[i].Watchers > insights[j].Watchers
+			},
+			Value: func(i insight) int {
+				return i.Watchers
+			},
+		},
+	}
+
+	var lines = []string{
+		fmt.Sprintf("Aggregate Insights from %d online chatter(s):", len(insights)),
+	}
+	for _, metric := range byMetrics {
+		lines = append(lines, fmt.Sprintf("\n\n**%s:**\n\n", metric.Name))
+
+		sort.Slice(insights, metric.Sort)
+		for i, row := range insights {
+			if i >= 5 {
+				break
+			}
+			lines = append(lines, fmt.Sprintf("* %s: %d\n", row.Username, metric.Value(row)))
+		}
+	}
+
+	sub.ChatServerMarkdown(strings.Join(lines, ""))
+
+}
+
+func stringMapToSortedList(v map[string]struct{}) []string {
+	var result []string
+
+	for value := range v {
+		result = append(result, value)
+	}
+
+	sort.Strings(result)
+	return result
 }

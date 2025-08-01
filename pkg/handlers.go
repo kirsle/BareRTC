@@ -687,7 +687,6 @@ func (s *Server) OnBlocklist(sub *Subscriber, msg messages.Message) {
 
 	sub.muteMu.Lock()
 	for _, username := range msg.Usernames {
-		sub.muted[username] = struct{}{}
 		sub.blocked[username] = struct{}{}
 	}
 
@@ -764,6 +763,16 @@ func (s *Server) OnWatch(sub *Subscriber, msg messages.Message) {
 		return
 	}
 
+	// Record this for /insights command.
+	// Current sub is watching them:
+	sub.muteMu.Lock()
+	sub.watching[other.Username] = struct{}{}
+	sub.muteMu.Unlock()
+	// The target is now being watched:
+	other.muteMu.Lock()
+	other.watchers[sub.Username] = struct{}{}
+	other.muteMu.Unlock()
+
 	other.SendJSON(messages.Message{
 		Action:   messages.ActionWatch,
 		Username: sub.Username,
@@ -777,6 +786,16 @@ func (s *Server) OnUnwatch(sub *Subscriber, msg messages.Message) {
 	if err != nil {
 		return
 	}
+
+	// Record this for /insights command.
+	// Current sub is unwatching them:
+	sub.muteMu.Lock()
+	delete(sub.watching, other.Username)
+	sub.muteMu.Unlock()
+	// The target is now being unwatched:
+	other.muteMu.Lock()
+	delete(other.watchers, sub.Username)
+	other.muteMu.Unlock()
 
 	other.SendJSON(messages.Message{
 		Action:   messages.ActionUnwatch,

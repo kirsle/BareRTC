@@ -169,7 +169,7 @@ class WebRTCController {
                 // video (e.g., by clicking their Who List video button).
                 expresslyClosed: {},  // bool per username
 
-                // Rate limit pre-emptive boots: to avoid a user coming thru the entire Who List
+                // Rate limit pre-emptive boots: to avoid a user combing thru the entire Who List
                 // and kicking everyone off their cam when they aren't even watching yet.
                 preemptBootRateLimit: {
                     counter: 0,       // how many people have they booted so far
@@ -995,6 +995,16 @@ class WebRTCController {
                 if (this.status === 'hidden') {
                     this.ChatClient("Your chat status is currently set to 'hidden' and you would break the illusion by opening this camera.");
                     return;
+                }
+
+                // Operators: did this user boot us recently?
+                if (!force && this.isOp && this.bootsMe[user.username]) {
+                    return this.modalConfirm({
+                        title: "This user had booted you before",
+                        message: `@${user.username} has recently booted you from watching their camera.\n\nIf they were behaving themselves, take the hint. Do you need to open their camera?`,
+                    }).then(() => {
+                        this.openVideo(user, true);
+                    });
                 }
 
                 // A chat moderation rule?

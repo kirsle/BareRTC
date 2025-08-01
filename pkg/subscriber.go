@@ -46,11 +46,13 @@ type Subscriber struct {
 	lastPollAt  time.Time
 	lastPollJWT time.Time // give a new JWT once in a while
 
-	muteMu  sync.RWMutex
-	booted  map[string]struct{} // usernames booted off your camera
-	blocked map[string]struct{} // usernames you have blocked
-	muted   map[string]struct{} // usernames you muted
-	invited map[string]struct{} // usernames you invited to watch your camera
+	muteMu   sync.RWMutex
+	booted   map[string]struct{} // usernames booted off your camera
+	blocked  map[string]struct{} // usernames you have blocked
+	muted    map[string]struct{} // usernames you muted
+	invited  map[string]struct{} // usernames you invited to watch your camera
+	watching map[string]struct{} // cameras we watch (insights only)
+	watchers map[string]struct{} // our watchers (insights only)
 
 	// Admin "unblockable" override command, e.g. especially for your chatbot so it can
 	// still moderate the chat even if users had blocked it. The /unmute-all admin command
@@ -77,6 +79,8 @@ func (s *Server) NewSubscriber(ctx context.Context, cancelFunc func()) *Subscrib
 		muted:      make(map[string]struct{}),
 		blocked:    make(map[string]struct{}),
 		invited:    make(map[string]struct{}),
+		watching:   make(map[string]struct{}),
+		watchers:   make(map[string]struct{}),
 		messageIDs: make(map[int64]struct{}),
 		ChatStatus: "online",
 	}
@@ -263,6 +267,12 @@ func (sub *Subscriber) ChatServer(message string, v ...interface{}) {
 		Username: "ChatServer",
 		Message:  message,
 	})
+}
+
+// ChatServerMarkdown sends a ChatServer message with Markdown formatting.
+func (sub *Subscriber) ChatServerMarkdown(message string, v ...interface{}) {
+	text := RenderMarkdown(fmt.Sprintf(message, v...))
+	sub.ChatServer(text)
 }
 
 // AddSubscriber adds a WebSocket subscriber to the server.

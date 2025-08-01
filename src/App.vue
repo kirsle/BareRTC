@@ -143,6 +143,7 @@ export default {
             whoMap: {}, // map username to wholist entry
             whoOnline: {}, // map users actually online right now
             muted: {},  // muted usernames for client side state
+            bootsMe: {}, // users who booted us (admins only)
 
             // Misc. user preferences (TODO: move all of them here)
             prefs: {
@@ -271,6 +272,17 @@ export default {
             messageHistoryModal: {
                 visible: false,
             },
+
+            // Rate limit muting users: so people don't mute the entire chat room as a way
+            // to whitelist their webcam audience in lieu of booting them (which is also rate limited).
+            muteUserRateLimit: {
+                counter: 0,       // how many people have they muted so far
+                cooldownAt: null, // Date for cooldown once they reach the threshold
+
+                // Configuration settings:
+                maxFreeMutes: 10, // first 10 are free
+                cooldownTTL: 60, // then must wait this number of seconds before each mute
+            }
         };
     },
     mounted() {
@@ -1236,6 +1248,10 @@ export default {
             };
 
             if (mute) {
+                // Check if they are currently rate limited from pre-emptive boots of folks
+                // who are not even watching their camera yet.
+                if (this.rateLimitMutes(username, false)) return;
+
                 this.modalConfirm({
                     title: `Mute ${username}`,
                     icon: "fa fa-comment-slash",
@@ -1243,6 +1259,9 @@ export default {
                         `chat messages or any DMs they send you going forward. Also, ${username} will ` +
                         `not be able to see whether your webcam is active until you unmute them.`,
                 }).then(() => {
+                    // Ping their rate limiter.
+                    if (this.rateLimitMutes(username, true)) return;
+
                     this.muted[username] = true;
                     callback();
                 });
@@ -1267,6 +1286,45 @@ export default {
         },
         isMutedUser(username) {
             return this.muted[this.normalizeUsername(username)] != undefined;
+        },
+        rateLimitMutes(username, ping=false) {
+            // Rate limit muting too many people, in case users do this to whitelist their cam audience.
+            // Returns true if limited, false otherwise.
+
+            let cooldownAt = this.muteUserRateLimit.cooldownAt,
+                cooldownTTL = this.muteUserRateLimit.cooldownTTL,
+                now = new Date().getTime();
+
+            // Within the 'free' rate limits?
+            if (this.muteUserRateLimit.counter < this.muteUserRateLimit.maxFreeMutes) {
+                if (!ping) return false;
+                this.muteUserRateLimit.counter++;
+            }
+
+            // Begin enforcing a cooldown TTL after a while.
+            if (this.muteUserRateLimit.counter >= this.muteUserRateLimit.maxFreeMutes) {
+
+                // Currently throttled?
+                if (cooldownAt !== null) {
+                    if (now < cooldownAt) {
+                        let delta = cooldownAt - now;
+                        this.modalAlert({
+                            title: "You are doing that too often",
+                            message: "You have been muting an unusually large number of people recently.\n\n" +
+                                `Please wait ${cooldownTTL} seconds between any additional mutes.\n\n` +
+                                `You may try again after ${delta/1000} seconds.`,
+                        });
+                        return true;
+                    }
+                }
+
+                // Refresh the timer on pings.
+                if (ping) {
+                    this.muteUserRateLimit.cooldownAt = now + (cooldownTTL * 1000);
+                }
+            }
+
+            return false;
         },
         isBlockedUser(username) {
             if (this.config.CachedBlocklist.length > 0) {
@@ -1734,6 +1792,15 @@ export default {
             }
         },
         pushHistory({ channel, username, message, action = "message", isChatServer, isChatClient, messageID, timestamp = null, unshift = false }) {
+
+            // Admins only: note when a user has booted us off their camera.
+            if (isChatServer) {
+                let m = message.match(/^(.+?) has booted you off of their camera!/);
+                if (m) {
+                    let username = m[1];
+                    this.bootsMe[username] = true;
+                }
+            }
 
             // Default channel = your current channel.
             if (!channel) {
