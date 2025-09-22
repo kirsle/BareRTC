@@ -234,6 +234,7 @@ func PaginateDirectMessages(fromUsername, toUsername string, beforeID int64) ([]
 		FROM direct_messages
 		WHERE channel_id = ?
 		AND message_id < ?
+		AND deleted_at IS NULL
 	`, channelID, lastMessageID)
 	if res := row.Scan(&remaining); res.Error != nil {
 		return nil, 0, res.Error
