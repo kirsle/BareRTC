@@ -67,7 +67,11 @@ func (dm DirectMessage) Init() error {
 	// Migrate old rows to the V2 schema.
 	dm.MigrateV2()
 
-	// Delete old messages past the retention period.
+	return nil
+}
+
+// DeleteOldMessages expires off messages older than the cutoff date.
+func (dm DirectMessage) DeleteOldMessages() error {
 	if days := config.Current.DirectMessageHistory.RetentionDays; days > 0 {
 		cutoff := time.Now().Add(time.Duration(-days) * 24 * time.Hour)
 		log.Info("Deleting old DM history past %d days (cutoff: %s)", days, cutoff.Format(time.RFC3339))
@@ -79,7 +83,6 @@ func (dm DirectMessage) Init() error {
 			return fmt.Errorf("deleting old DMs past the cutoff period: %s", res.Error)
 		}
 	}
-
 	return nil
 }
 

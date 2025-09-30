@@ -78,6 +78,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/api/message/clear", s.ClearMessages())
 	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("dist/assets"))))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("dist/static"))))
+	mux.Handle("/files/", http.StripPrefix("/files/", http.FileServer(http.Dir("web/files"))))
 
 	s.mux = mux
 

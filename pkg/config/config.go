@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 19
+var currentVersion = 20
 
 // Config for your BareRTC app.
 type Config struct {
@@ -42,6 +42,10 @@ type Config struct {
 	WebSocketSendTimeout int
 	MaxImageWidth        int
 	PreviewImageWidth    int
+
+	HostImages           bool   `toml:"" comment:"Whether to host shared image files on the BareRTC server. If false (default), images\nare sent out as data: URLs and don't require hosting. If true, images will be stored temporarily\non disk. This may be useful for end user performance, or for moderators to check out a\nreported image they weren't online to see when it came in."`
+	HostImagesExpireDays int    `toml:"" comment:"If hosting images, expire/remove the files from disk after this many days."`
+	HostImagesURLPrefix  string `toml:"" comment:"URL prefix for hosted images. Use / for local URI, or https://chat.example.com/ (mind the trailing slash!) for absolute URI.\nRecommended to use an absolute URI so if the image is reported to your site, the link is easily viewable."`
 
 	TURN TurnConfig `toml:"" comment:"Configure your TURN or STUN servers here.\n\nSTUN servers help WebRTC clients connect peer-to-peer for video, which is\npreferable as it saves on your bandwidth. You should list at least one, and\nthere are many public servers available such as Google's.\n\nTURN servers help WebRTC clients connect when a direct connection isn't\npossible. An open source server called 'coturn' can do both STUN and TURN."`
 
@@ -173,6 +177,8 @@ func DefaultConfig() Config {
 		MaxImageWidth:        1280,
 		PreviewImageWidth:    360,
 		AnnounceKicks:        true,
+		HostImagesExpireDays: 7,
+		HostImagesURLPrefix:  "/",
 		PublicChannels: []Channel{
 			{
 				ID:   "lobby",

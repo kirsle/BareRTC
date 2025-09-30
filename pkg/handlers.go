@@ -3,6 +3,7 @@ package barertc
 import (
 	"encoding/base64"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -386,13 +387,32 @@ func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 
 	// Process the image: scale it down, strip metadata, etc.
 	img, pvWidth, pvHeight := ProcessImage(filetype, msg.Bytes)
-	var dataURL = fmt.Sprintf("data:%s;base64,%s", filetype, base64.StdEncoding.EncodeToString(img))
 
 	// Assign a message ID and own it to the sender.
 	sub.midMu.Lock()
 	var mid = messages.NextMessageID()
 	sub.messageIDs[mid] = struct{}{}
 	sub.midMu.Unlock()
+
+	// Are we storing the file on disk, or echo it as a data: URL?
+	var imageURL string
+	if !config.Current.HostImages {
+		imageURL = fmt.Sprintf("data:%s;base64,%s", filetype, base64.StdEncoding.EncodeToString(img))
+	} else {
+		filename := fmt.Sprintf("%s.%d.%s%s",
+			time.Now().Format(time.DateOnly),
+			mid,
+			util.StripNasties(sub.Username),
+			ext,
+		)
+		filepath := "./web/files/" + filename
+		os.WriteFile(filepath, img, 0644)
+		prefix := config.Current.HostImagesURLPrefix
+		if !strings.HasSuffix(prefix, "/") {
+			prefix += "/"
+		}
+		imageURL = prefix + "files/" + filename
+	}
 
 	// Message to be echoed to the channel.
 	var message = messages.Message{
@@ -404,7 +424,7 @@ func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 		// Their image embedded via a data: URI - no server storage needed!
 		Message: fmt.Sprintf(
 			`<img src="%s" width="%d" height="%d" onclick="setModalImage(this.src)" style="cursor: pointer">`,
-			dataURL,
+			imageURL,
 			pvWidth, pvHeight,
 		),
 	}

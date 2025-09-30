@@ -2479,7 +2479,7 @@ export default {
             let clone = Object.assign({}, message);
 
             // Sub out attached images.
-            clone.message = clone.message.replace(/<img .+?>/g, "[inline image]");
+            clone.message = clone.message.replace(/<img .+?src="data:.+?".+?>/g, "[inline image]");
 
             this.reportModal.message = clone;
             this.reportModal.user = user;

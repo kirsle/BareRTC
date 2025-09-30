@@ -1,6 +1,9 @@
 settings.toml
 chatbot/
 *.sqlite
+web/files/*.jpg
+web/files/*.png
+web/files/*.gif
 
 # Binaries
 BareBot
