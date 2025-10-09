@@ -14,6 +14,7 @@ export default {
         isDnd: Boolean,
         isMuted: Boolean,
         isBooted: Boolean,
+        isFriend: Boolean,
         profileWebhookEnabled: Boolean,
         vipConfig: Object,  // VIP config settings for BareRTC
         myVideoActive: Boolean, // local user's camera is on
@@ -363,6 +364,11 @@ export default {
                                         @{{ user.username }}
                                     </a>
                                     <span v-else class="has-text-grey">@{{ user.username }}</span>
+
+                                    <!-- Friendship badge -->
+                                    <strong v-if="isFriend" class="has-text-success ml-4">
+                                        <i class="fa fa-user-group is-size-7"></i> Friends!
+                                    </strong>
                                 </small>
                             </div>
 

@@ -72,6 +72,7 @@ class WebRTCController {
                 autoMute: false, // mute our mic automatically when going live (user option)
                 nsfw: false,  // user has flagged their camera to be NSFW
                 mutual: false, // user wants viewers to share their own videos
+                friendsAlwaysWelcome: false, // always invite friends to watch my camera
                 mutualOpen: false, // user wants to open video mutually
                 nonExplicit: false, // user prefers not to see explicit cameras
                 vipOnly: false, // only show camera to fellow VIP users
@@ -215,11 +216,29 @@ class WebRTCController {
                 if (this.webcam.active) {
                     this.sendMe();
                 }
+                if (this.webcam.mutual && this.webcam.friendsAlwaysWelcome) {
+                    this.inviteFriendsToWatch();
+                }
             },
             "webcam.mutualOpen": function () {
                 LocalStorage.set('videoMutualOpen', this.webcam.mutualOpen);
                 if (this.webcam.active) {
                     this.sendMe();
+                }
+            },
+            "webcam.friendsAlwaysWelcome": function() {
+                LocalStorage.set('friendsAlwaysWelcome', this.webcam.friendsAlwaysWelcome);
+                if (this.webcam.friendsAlwaysWelcome) {
+                    this.inviteFriendsToWatch();
+                } else {
+                    this.modalAlert({
+                        title: "About turning off this setting",
+                        message: "Please note: invites to watch your camera are 'send only.'\n\n" +
+                            "When you turn this option OFF, your friends who were logged onto the chat room recently " +
+                            "are still invited to see your camera. Turning this setting OFF does NOT take back those invites!\n\n" +
+                            "You may need to Refresh the web page to reset your camera invitations if you don't " +
+                            "want your friends to be invited to watch any more!"
+                    });
                 }
             },
             "webcam.nonExplicit": function () {
@@ -830,6 +849,9 @@ class WebRTCController {
 
                     // Begin monitoring for speaking events.
                     this.initSpeakingEvents(this.username, this.webcam.elem);
+
+                    // Invite our friends to watch?
+                    this.inviteFriendsToWatch();
                 }).catch(err => {
                     this.ChatClient(`Webcam error: ${err}<br><br>Please see the <a href="/about#troubleshooting">troubleshooting guide</a> for help.`);
                 }).finally(() => {

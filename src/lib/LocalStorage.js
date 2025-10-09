@@ -12,6 +12,7 @@ const keys = {
     // Webcam settings (booleans)
     'videoMutual': Boolean,
     'videoMutualOpen': Boolean,
+    'friendsAlwaysWelcome': Boolean, // always send invite to friends
     'videoAutoMute': Boolean,
     'videoVipOnly': Boolean,
     'videoExplicit': Boolean,  // whether the user turns explicit on by default

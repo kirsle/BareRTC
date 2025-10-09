@@ -870,6 +870,169 @@ func (s *Server) UserProfile() http.HandlerFunc {
 	})
 }
 
+// UserFriends (/api/friends) fetches friendship booleans for users on chat.
+//
+// This endpoint will proxy to your WebhookURL for the "friends" endpoint.
+// If your webhook is not configured or not reachable, this endpoint returns
+// an error to the caller.
+//
+// Authentication: the caller must send their current chat JWT token when
+// hitting this endpoint.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"JWTToken": "the caller's jwt token",
+//		"Usernames": [ "other", "users", "on", "chat" ]
+//	}
+//
+// The response JSON will look like the following (this also mirrors the
+// response json as sent by your site's webhook URL):
+//
+//		{
+//			"OK": true,
+//		    "Error": "only on errors",
+//		    "Friends": {
+//				"other": true,
+//				"users": false,
+//				"on": true,
+//				"chat": false
+//	       	}
+//		}
+func (s *Server) UserFriends() http.HandlerFunc {
+	type request struct {
+		JWTToken  string
+		Usernames []string
+	}
+
+	type result struct {
+		OK      bool
+		Error   string `json:",omitempty"`
+		Friends map[string]bool
+	}
+
+	type webhookRequest struct {
+		Action    string
+		APIKey    string
+		Username  string
+		Usernames []string
+	}
+
+	type webhookResponse struct {
+		StatusCode int
+		Data       result
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only POST methods allowed",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Are JWT tokens enabled on the server?
+		if !config.Current.JWT.Enabled || params.JWTToken == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "JWT authentication is not available.",
+			})
+			return
+		}
+
+		// Validate the user's JWT token.
+		claims, _, err := jwt.ParseAndValidate(params.JWTToken)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Get the current subscriber.
+		sub, err := s.GetSubscriber(claims.Subject)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: err.Error(),
+			})
+			return
+		}
+
+		// Fetch the profile data from your website.
+		data, err := PostWebhook("friends", webhookRequest{
+			Action:    "friends",
+			APIKey:    config.Current.AdminAPIKey,
+			Username:  sub.Username,
+			Usernames: params.Usernames,
+		})
+		if err != nil {
+			log.Error("Couldn't get friends information: %s", err)
+		}
+
+		// Success? Try and parse the response into our expected format.
+		var resp webhookResponse
+		if err := json.Unmarshal(data, &resp); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+
+			// A nice error message?
+			if resp.Data.Error != "" {
+				enc.Encode(result{
+					Error: resp.Data.Error,
+				})
+			} else {
+				enc.Encode(result{
+					Error: fmt.Sprintf("Didn't get expected response for friends data: %s", err),
+				})
+			}
+			return
+		}
+
+		// Populate default false values for any username the client asked for
+		// but which was not included in the site's webhook response.
+		for _, username := range params.Usernames {
+			if _, ok := resp.Data.Friends[username]; !ok {
+				resp.Data.Friends[username] = false
+			}
+		}
+
+		// At this point the expected resp mirrors our own, so return it.
+		if resp.StatusCode != http.StatusOK || resp.Data.Error != "" {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		enc.Encode(resp.Data)
+	})
+}
+
 // MessageHistory (/api/message/history) fetches past direct messages for a user.
 //
 // This endpoint looks up earlier chat messages between the current user and a target.

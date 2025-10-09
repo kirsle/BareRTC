@@ -271,6 +271,56 @@ The response JSON given to the chat page from /api/profile looks like:
 }
 ```
 
+## POST /api/friends
+
+Fetch friendship information between the current username and others that they
+see logged into the chat room. Note: this API request is done by the BareRTC chat
+front-end page, as an ajax request for a current logged-in user.
+
+The request body payload looks like:
+
+```json
+{
+    "JWTToken": "the caller's chat jwt token",
+    "Usernames": ["other", "usernames", "on", "chat"]
+}
+```
+
+When the user first logs onto the chat room and receives the Who's Online list, it
+will post to this API with the list of usernames to check friendship for. Subsequently,
+when new usernames join the room, their chat page will check only for those new
+usernames to pad out its front-end state of friendship booleans.
+
+The JWT token is the current chat user's token. This API only works when
+your BareRTC config requires the use of JWT tokens for authorization.
+
+BareRTC will translate the request into the
+["Friends Webhook"](Webhooks.md#Friends%20Webhook) to fetch the target
+user's profile from your website. Your website will return a map of usernames
+to booleans to respond to the user's friendship request.
+
+The response JSON given to the chat page from /api/friends looks like:
+
+```json
+{
+    "OK": true,
+    "Error": "only on error messages",
+    "Friends": {
+        "other": true,
+        "users": false,
+        "on": true,
+        "chat": false
+    }
+}
+```
+
+**Note:** every username posted to this API endpoint will be reflected in the
+response, with `false` booleans if your upstream webhook didn't say otherwise.
+As documented on the Webhook page, your web server does NOT need to include the
+`false` booleans - BareRTC assumes no friendship by default and is only looking
+for the `true` booleans, so that the front-end page knows who the user's friends
+are and can mark them accordingly.
+
 ## POST /api/message/history
 
 Load prior history in a Direct Message conversation with another party.

@@ -73,6 +73,7 @@ func (s *Server) Setup() error {
 	mux.Handle("/api/amend-jwt", s.AmendJWT())
 	mux.Handle("/api/shutdown", s.ShutdownAPI())
 	mux.Handle("/api/profile", s.UserProfile())
+	mux.Handle("/api/friends", s.UserFriends())
 	mux.Handle("/api/message/history", s.MessageHistory())
 	mux.Handle("/api/message/usernames", s.MessageUsernameHistory())
 	mux.Handle("/api/message/clear", s.ClearMessages())

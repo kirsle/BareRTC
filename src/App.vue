@@ -145,6 +145,10 @@ export default {
             muted: {},  // muted usernames for client side state
             bootsMe: {}, // users who booted us (admins only)
 
+            // Friendship map between the current user and those online.
+            // Map of username:boolean.
+            friendMap: {},
+
             // Misc. user preferences (TODO: move all of them here)
             prefs: {
                 usePolling: false,   // use the polling API instead of WebSockets.
@@ -705,6 +709,21 @@ export default {
                     break;
                 case "z-a":
                     result = result.reverse();
+                    break;
+                case "friends":
+                case "-friends":
+                    result.sort((a, b) => {
+                        const aFriend = !!this.friendMap[a.username];
+                        const bFriend = !!this.friendMap[b.username];
+                        if (aFriend !== bFriend) {
+                            // Friends sorted first.
+                            return aFriend ? -1 : 1;
+                        }
+
+                        // If both are friends or not friends, alphabetically.
+                        return this.whoSort === "friends" ? a.username.localeCompare(b.username) : b.username.localeCompare(a.username);
+                    });
+                    break;
             }
 
             // Default ordering from ChatServer = a-z
@@ -750,6 +769,9 @@ export default {
             }
             if (settings.videoMutualOpen === true) {
                 this.webcam.mutualOpen = true;
+            }
+            if (settings.friendsAlwaysWelcome === true) {
+                this.webcam.friendsAlwaysWelcome = true;
             }
             if (settings.videoAutoMute === true) {
                 this.webcam.autoMute = true;
@@ -1188,6 +1210,9 @@ export default {
                 let timeout = 1000 + parseInt(Math.random() * 10000)
                 setTimeout(this.sendMe, timeout);
             }
+
+            // Get friendships map for new users.
+            this.getFriendMaps();
         },
 
         // Server side "block" event: for when the main website sends a BlockNow API request.
@@ -2456,6 +2481,76 @@ export default {
             return false;
         },
 
+        // Get a friendship map from users online who we don't have friendships for yet.
+        getFriendMaps() {
+            if (!this.isWebhookEnabled("friends")) return;
+            if (!this.jwt.valid) return;
+
+            // Which usernames to check?
+            let usernames = [];
+            for (let user of this.whoList) {
+                if (this.friendMap[user.username] == undefined) {
+                    usernames.push(user.username);
+                }
+            }
+
+            // No usernames to check?
+            if (usernames.length === 0) return;
+
+            // Check for friendships.
+            return fetch("/api/friends", {
+                method: "POST",
+                mode: "same-origin",
+                cache: "no-cache",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    "JWTToken": this.jwt.token,
+                    "Usernames": usernames,
+                }),
+            }).then((response) => response.json())
+            .then((data) => {
+                if (data.Error) {
+                    this.ChatClient("Error getting friends list: "+data.Error);
+                    return;
+                }
+
+                // Update the statuses.
+                for (let username of Object.keys(data.Friends)) {
+                    this.friendMap[username] = data.Friends[username];
+                }
+
+                // Invite them to watch our camera?
+                this.inviteFriendsToWatch();
+            }).catch(err => {
+                console.error("mapFriends: %s", err);
+            });
+        },
+        isFriend(username) {
+            return this.friendMap[username] === true;
+        },
+        inviteFriendsToWatch() {
+            // Bulk invite all our friends to our cam. Only if:
+            if (!this.webcam.friendsAlwaysWelcome) return; // 1. The user opts in.
+            if (!this.webcam.mutual) return; // 2. Their mutual camera setting is ON.
+            if (!this.webcam.active) return; // 3. Their camera is even ON.
+
+            // Send a bulk invite to all our friends.
+            let friends = [];
+            for (let username of Object.keys(this.friendMap)) {
+                if (this.friendMap[username] === true) {
+                    friends.push(username);
+                    this.WebRTC.invited[username] = true;
+                }
+            }
+
+            if (friends.length > 0) {
+                this.sendInviteVideoBulk();
+            }
+        },
+
         reportMessage(message, force=false) {
             // User is reporting a message on chat.
             if (message.reported && !force) {
@@ -2942,6 +3037,14 @@ export default {
                             </label>
                         </div>
 
+                        <div class="field mb-1 ml-5" v-show="jwt.valid && isWebhookEnabled('friends')">
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="webcam.friendsAlwaysWelcome" :disabled="!webcam.mutual">
+                                My friends are always invited to watch my camera
+                                <span class="tag is-success ml-2">New!</span>
+                            </label>
+                        </div>
+
                         <div class="field mb-1">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.mutualOpen">
@@ -3224,6 +3327,14 @@ export default {
                         </label>
                     </div>
 
+                    <div class="field mb-1 ml-5" v-show="jwt.valid && isWebhookEnabled('friends')">
+                        <label class="checkbox">
+                            <input type="checkbox" v-model="webcam.friendsAlwaysWelcome" :disabled="!webcam.mutual">
+                            My friends are always invited to watch my camera
+                            <span class="tag is-success ml-2">New!</span>
+                        </label>
+                    </div>
+
                     <div class="field mb-1">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.mutualOpen">
@@ -3304,6 +3415,7 @@ export default {
         :is-dnd="isUsernameDND(profileModal.username)"
         :is-muted="isMutedUser(profileModal.username)"
         :is-booted="isBooted(profileModal.username)"
+        :is-friend="isFriend(profileModal.username)"
         :profile-webhook-enabled="isWebhookEnabled('profile')"
         :vip-config="config.VIP"
         :is-watching="isWatching(profileModal.username)"
@@ -3886,6 +3998,10 @@ export default {
                                         <option value="a-z">Username (a-z)</option>
                                         <option value="z-a">Username (z-a)</option>
                                     </optgroup>
+                                    <optgroup label="By Friendship" v-if="isWebhookEnabled('friends')">
+                                        <option value="friends">Friends first (a-z)</option>
+                                        <option value="-friends">Friends first (z-a)</option>
+                                    </optgroup>
                                     <optgroup label="Webcam Status">
                                         <option value="broadcasting">Broadcasting</option>
                                         <option value="nsfw" v-show="config.permitNSFW">Red cameras</option>
@@ -3936,6 +4052,7 @@ export default {
                                 :is-muted="isMutedUser(u.username)"
                                 :is-blocked="isBlockedUser(u.username)"
                                 :is-booted="isBooted(u.username)"
+                                :is-friend="isFriend(u.username)"
                                 :is-op="isOp"
                                 :is-video-not-allowed="isVideoNotAllowed(u)"
                                 :video-icon-class="webcamIconClass(u)"

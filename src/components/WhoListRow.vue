@@ -11,6 +11,7 @@ export default {
         isMuted: Boolean,   // user is muted by current user
         isBlocked: Boolean, // user is blocked on your main website (can't be unmuted)
         isBooted: Boolean,  // user is booted by current user
+        isFriend: Boolean,  // user is our friend
         vipConfig: Object,  // VIP config settings for BareRTC
         isOp: Boolean,      // current user is operator (can always DM)
         isVideoNotAllowed: Boolean,  // whether opening this camera is not allowed
@@ -146,6 +147,7 @@ export default {
         </div>
         <div class="column pr-0 pl-1 is-clipped">
             <strong class="truncate-text-line is-size-7 cursor-pointer"
+                :class="{'has-text-success': isFriend}"
                 @click="openProfile()">
                 {{ user.username }}
             </strong>

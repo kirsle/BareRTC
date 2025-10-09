@@ -88,3 +88,40 @@ The expected response from your endpoint should follow this format:
 ```
 
 If the Headline field is provided from your site, it will be shown above the profile fields in a banner.
+
+## Friends Webhook
+
+This webhook allows BareRTC to check for friendships between your users on your main website.
+
+BareRTC will call your webhook URL with the following payload:
+
+```javascript
+{
+    "Action": "friends",
+    "APIKey": "shared secret from settings.toml#AdminAPIKey",
+    "Username": "soandso",
+    "Usernames": ["other", "usernames", "on", "chat"]
+}
+```
+
+The `Username` is the current user requesting their friendship map. The `Usernames` is the array of other chatters currently on the chat room. When the user first logs into the room, they will check for their friendship with everybody in the Who's Online list. Subsequently, when new people log into the chat room and their chat page has not gotten a result for their friendship with them, it will post a smaller list of usernames to check.
+
+The expected response from your endpoint should follow this format:
+
+```javascript
+{
+    "StatusCode": 200,
+    "Data": {
+        "OK": true,
+        "Error": "any error messaging (omittable if no errors)",
+        "Friends": {
+            "other": true,
+            "usernames": false,
+            "on": true,
+            "chat": true
+        }
+    }
+}
+```
+
+**Note:** BareRTC only cares about `true` boolean values in the Friends result. Your site MAY include `false` for users who are not the current user's friends, or it may omit usernames from the result. BareRTC will gather the `true` values and communicate them back to the chat front-end page.
