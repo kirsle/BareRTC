@@ -148,6 +148,8 @@ export default {
             // Friendship map between the current user and those online.
             // Map of username:boolean.
             friendMap: {},
+            friendMapBusy: false,
+            friendMapRepeat: false,
 
             // Misc. user preferences (TODO: move all of them here)
             prefs: {
@@ -2486,6 +2488,14 @@ export default {
             if (!this.isWebhookEnabled("friends")) return;
             if (!this.jwt.valid) return;
 
+            // Deduplicate and serialize ajax requests: in case a flurry of Who List updates
+            // came in rapidly, only one request should be in flight. Subsequent attempts should
+            // flag the 'repeat' variable and we will check again when done.
+            if (this.friendMapBusy) {
+                this.friendMapRepeat = true;
+                return;
+            }
+
             // Which usernames to check?
             let usernames = [];
             for (let user of this.whoList) {
@@ -2498,6 +2508,7 @@ export default {
             if (usernames.length === 0) return;
 
             // Check for friendships.
+            this.friendMapBusy = true;
             return fetch("/api/friends", {
                 method: "POST",
                 mode: "same-origin",
@@ -2526,6 +2537,14 @@ export default {
                 this.inviteFriendsToWatch();
             }).catch(err => {
                 console.error("mapFriends: %s", err);
+            }).finally(() => {
+                this.friendMapBusy = false;
+
+                // Check again to be sure?
+                if (this.friendMapRepeat) {
+                    this.friendMapRepeat = false;
+                    this.getFriendMaps();
+                }
             });
         },
         isFriend(username) {
