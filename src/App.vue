@@ -4097,6 +4097,7 @@ export default {
                                 :is-muted="isMutedUser(username)"
                                 :is-blocked="isBlockedUser(u.username)"
                                 :is-booted="isBooted(u.username)"
+                                :is-friend="isFriend(u.username)"
                                 :is-op="isOp"
                                 :is-video-not-allowed="isVideoNotAllowed(u)"
                                 :video-icon-class="webcamIconClass(u)"
