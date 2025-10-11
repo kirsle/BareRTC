@@ -31,6 +31,10 @@ const DirectMessagePerPage = 20
 // During this switch, we also deprecate the old Timestamp column in favor of CreatedAt.
 // This function will run in a background goroutine and update legacy rows to the new format.
 func (db DirectMessage) MigrateV2() {
+	if DB == nil {
+		return
+	}
+
 	// Find rows that need upgrading.
 	var page int
 	for {
@@ -72,6 +76,10 @@ func (dm DirectMessage) Init() error {
 
 // DeleteOldMessages expires off messages older than the cutoff date.
 func (dm DirectMessage) DeleteOldMessages() error {
+	if DB == nil {
+		return ErrNotInitialized
+	}
+
 	if days := config.Current.DirectMessageHistory.RetentionDays; days > 0 {
 		cutoff := time.Now().Add(time.Duration(-days) * 24 * time.Hour)
 		log.Info("Deleting old DM history past %d days (cutoff: %s)", days, cutoff.Format(time.RFC3339))
@@ -331,6 +339,10 @@ func PaginateUsernames(fromUsername, sortBy string, page, perPage int) ([]string
 
 // GetDistinctChannelIDs collects all of the conversation thread IDs the current user is a party to.
 func GetDistinctChannelIDs(username string) ([]string, error) {
+	if DB == nil {
+		return nil, ErrNotInitialized
+	}
+
 	var (
 		result     = []string{}
 		channelIDs = []string{
