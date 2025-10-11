@@ -1004,6 +1004,9 @@ func (s *Server) UserFriends() http.HandlerFunc {
 		if err := json.Unmarshal(data, &resp); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 
+			// Log the details.
+			log.Error("UserFriends API: failed to parse JSON. Got body: %s", data)
+
 			// A nice error message?
 			if resp.Data.Error != "" {
 				enc.Encode(result{
