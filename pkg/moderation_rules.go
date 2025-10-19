@@ -36,7 +36,7 @@ func (sub *Subscriber) GetModerationRule() *config.ModerationRule {
 		}
 	}
 
-	log.Error("GetModerationRule(%s): %+v", sub.Username, rules)
+	log.Debug("GetModerationRule(%s): %+v", sub.Username, rules)
 
 	return rules
 }

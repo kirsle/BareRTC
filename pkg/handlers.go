@@ -340,6 +340,13 @@ func (s *Server) OnTakeback(sub *Subscriber, msg messages.Message) {
 
 // OnReact handles emoji reactions for chat messages.
 func (s *Server) OnReact(sub *Subscriber, msg messages.Message) {
+
+	// Is this a NudgeNsfw reaction? (Community moderation feature where they can
+	// send hints to each other to turn their camera red).
+	if msg.MessageID == ReactNudgeNsfwMessageID {
+		CommunityModeration.Flag(s, msg.Message, sub.Username)
+	}
+
 	// Forward the reaction to everybody.
 	s.Broadcast(messages.Message{
 		Action:    messages.ActionReact,
@@ -488,6 +495,22 @@ func (s *Server) OnMe(sub *Subscriber, msg messages.Message) {
 				sub.ChatServer(config.Current.Strings.ModRuleErrorCameraAlwaysNSFW)
 			}
 
+		}
+
+		// Community Moderation: is the user currently punished with a locked red camera?
+		if !(msg.VideoStatus&messages.VideoFlagNSFW == messages.VideoFlagNSFW) && CommunityModeration.IsPunished(sub.Username) {
+			log.Error("OnMe: username %s tried to turn their camera blue but they are punished by CommunityModeration with a forced red camera", sub.Username)
+			msg.VideoStatus |= messages.VideoFlagNSFW
+			reflect = true
+			sub.ChatServer(
+				"Your camera is temporarily <strong>locked</strong> to 'Explicit' status because several members of the community had flagged " +
+					"your camera as needing to be marked as Explicit.<br><br>This state is only temporary: but for several minutes you will " +
+					"not be allowed to remove the Explicit tag from your camera.<br><br><strong>Note:</strong> Repeated attempts to do so will only prolong the duration " +
+					"until the red camera rule will be lifted from your account.",
+			)
+
+			// Ping their blue camera attempt counter.
+			CommunityModeration.PunishedUserTriedBlue(sub.Username)
 		}
 	}
 

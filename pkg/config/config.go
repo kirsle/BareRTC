@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 20
+var currentVersion = 21
 
 // Config for your BareRTC app.
 type Config struct {
@@ -55,8 +55,9 @@ type Config struct {
 
 	VIP VIP
 
-	MessageFilters []*MessageFilter
-	ModerationRule []*ModerationRule
+	MessageFilters      []*MessageFilter
+	ModerationRule      []*ModerationRule
+	CommunityModeration CommunityModeration `toml:"" comment:"Configure the community moderation feature for automatically marking cameras as Explicit.\nAfter multiple anonymous hints to mark the camera red have come in, the\nbroadcaster can have their cam marked red automatically."`
 
 	DirectMessageHistory DirectMessageHistory
 	DMLinkSpamProtection DMLinkSpamProtection
@@ -158,6 +159,14 @@ type ModerationRule struct {
 	NoDarkVideo      bool
 }
 
+// CommunityModeration configures the red camera moderation feature.
+type CommunityModeration struct {
+	Enabled              bool
+	RedCameraFlagsWindow time.Duration `toml:"" comment:"The window of time (in seconds) that a broadcaster has a blue (non-explicit) camera and multiple viewers send anonymous hints to turn it red.\nFor example, you may want to have a 15-minutes window within which to gather community flags before action is taken.\nDefault/recommended is 15 minutes (900)"`
+	RedCameraFlagsCount  int           `toml:"" comment:"How many red camera hints from Distinct usernames within the time window should trigger the broadcaster's camera to turn red?"`
+	RedCameraLockExpires time.Duration `toml:"" comment:"If a blue cammera got enough flags in the window, their camera will be set red automatically.\nHow long should the red camera rule lock their camera to red? (In seconds)\nDefault/recommended is 12 minutes (720)"`
+}
+
 // Current loaded configuration.
 var Current = DefaultConfig()
 
@@ -244,6 +253,12 @@ func DefaultConfig() Config {
 			{
 				Username: "example",
 			},
+		},
+		CommunityModeration: CommunityModeration{
+			Enabled:              true,
+			RedCameraFlagsWindow: 60 * 15,
+			RedCameraFlagsCount:  3,
+			RedCameraLockExpires: 60 * 12,
 		},
 		Strings: Strings{
 			ModRuleErrorCameraAlwaysNSFW: "A chat server moderation rule is currently in place which forces your camera to stay marked as Explicit. Please contact a chat moderator if you have any questions about this.",
