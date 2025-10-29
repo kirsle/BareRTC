@@ -159,6 +159,7 @@ export default {
                 watchNotif: true,    // notify in chat about cameras being watched
                 closeDMs: false,     // ignore unsolicited DMs
                 muteSounds: false,   // mute all sound effects
+                noFriends: false,    // opt-out of friends on chat feature
                 theme: "auto",       // auto, light, dark theme
                 debug: false,        // enable debugging features
             },
@@ -442,6 +443,10 @@ export default {
 
             // Tell ChatServer if we have gone to/from DND.
             this.sendMe();
+        },
+        "prefs.noFriends": function () {
+            LocalStorage.set('noFriends', this.prefs.noFriends);
+            this.toggleNoFriendsFeature();
         },
         "prefs.debug": function () {
             LocalStorage.set('debug', this.prefs.debug);
@@ -818,6 +823,9 @@ export default {
             }
             if (settings.closeDMs != undefined) {
                 this.prefs.closeDMs = settings.closeDMs === true;
+            }
+            if (settings.noFriends != undefined) {
+                this.prefs.noFriends = settings.noFriends === true;
             }
             if (this.prefs.debug != undefined) {
                 this.prefs.debug = settings.debug === true;
@@ -2485,6 +2493,7 @@ export default {
 
         // Get a friendship map from users online who we don't have friendships for yet.
         getFriendMaps() {
+            if (this.prefs.noFriends) return;
             if (!this.isWebhookEnabled("friends")) return;
             if (!this.jwt.valid) return;
 
@@ -2567,6 +2576,16 @@ export default {
 
             if (friends.length > 0) {
                 this.sendInviteVideoBulk();
+            }
+        },
+        toggleNoFriendsFeature() {
+            // Responds to the user toggling the noFriends opt-out setting.
+            if (this.prefs.noFriends) {
+                // Clear the cached data.
+                this.friendMap = {};
+            } else {
+                // Fetch friendships.
+                this.getFriendMaps();
             }
         },
 
@@ -3056,11 +3075,10 @@ export default {
                             </label>
                         </div>
 
-                        <div class="field mb-1 ml-5" v-show="jwt.valid && isWebhookEnabled('friends')">
+                        <div class="field mb-1 ml-5" v-show="jwt.valid && isWebhookEnabled('friends') && !prefs.noFriends">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.friendsAlwaysWelcome" :disabled="!webcam.mutual">
                                 My friends are always invited to watch my camera
-                                <span class="tag is-success ml-2">New!</span>
                             </label>
                         </div>
 
@@ -3192,6 +3210,18 @@ export default {
                                 <input type="checkbox" v-model="prefs.watchNotif" :value="true">
                                 Notify when somebody opens my camera
                             </label>
+                        </div>
+
+                        <div class="field" v-if="isWebhookEnabled('friends')">
+                            <label class="label mb-0">Friends on chat</label>
+                            <label class="checkbox">
+                                <input type="checkbox" v-model="prefs.noFriends" :value="true">
+                                Do not highlight my friends with green names
+                            </label>
+                            <p class="help">
+                                This will opt-out of the 'friends on chat' feature. For full effect, refresh the
+                                page after toggling this option.
+                            </p>
                         </div>
 
                         <div class="field">
@@ -3346,11 +3376,10 @@ export default {
                         </label>
                     </div>
 
-                    <div class="field mb-1 ml-5" v-show="jwt.valid && isWebhookEnabled('friends')">
+                    <div class="field mb-1 ml-5" v-show="jwt.valid && isWebhookEnabled('friends') && !prefs.noFriends">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.friendsAlwaysWelcome" :disabled="!webcam.mutual">
                             My friends are always invited to watch my camera
-                            <span class="tag is-success ml-2">New!</span>
                         </label>
                     </div>
 

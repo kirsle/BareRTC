@@ -28,8 +28,9 @@ const keys = {
     'exitMessages': Boolean,
     'watchNotif': Boolean,
     'muteSounds': Boolean,
-    'closeDMs': Boolean,      // close unsolicited DMs
-    'debug': Boolean,        // Debug views enabled (admin only)
+    'noFriends': Boolean,   // Disable friends feature (green usernames)
+    'closeDMs': Boolean,    // close unsolicited DMs
+    'debug': Boolean,       // Debug views enabled (admin only)
 
     // Don't Show Again on NSFW modals.
     'skip-nsfw-modal': Boolean,
