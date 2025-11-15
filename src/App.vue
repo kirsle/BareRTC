@@ -289,13 +289,23 @@ export default {
                 // Configuration settings:
                 maxFreeMutes: 10, // first 10 are free
                 cooldownTTL: 60, // then must wait this number of seconds before each mute
-            }
+            },
+
+            // Paused tab detector: on mobile and desktop browsers, tab sleeping is a commonly
+            // occurring feature which causes users to get disconnected from chat. Monitor for
+            // long pauses of page execution to hint to users what may be the problem.
+            pausedTab: {
+                interval: null,
+                lastClock: 0,
+                longestDelta: 0,
+            },
         };
     },
     mounted() {
         this.setupConfig(); // localSettings persisted settings
         this.setupIdleDetection();
         this.setupDropZone(); // file upload drag/drop
+        this.monitorPausedTabs();
 
         // Export a handy sendMessage function to the global window scope.
         window.SendMessage = this.sendCommand;
@@ -738,6 +748,24 @@ export default {
         },
     },
     methods: {
+
+        // Monitor for paused browser tabs.
+        monitorPausedTabs() {
+            this.pausedTab.interval = setInterval(() => {
+                if (this.pausedTab.lastClock === 0) {
+                    this.pausedTab.lastClock = performance.now();
+                    return;
+                }
+
+                let now = performance.now();
+                let delta = now - this.pausedTab.lastClock;
+                if (delta > this.pausedTab.longestDelta) {
+                    this.pausedTab.longestDelta = delta;
+                }
+
+                this.pausedTab.lastClock = now;
+            }, 1000);
+        },
 
         // Load user prefs from localStorage, called on startup
         setupConfig() {
@@ -1522,6 +1550,7 @@ export default {
                 prefs: this.prefs,
 
                 onLoggedIn: this.onLoggedIn,
+                onDisconnectError: this.onDisconnectError,
                 onWho: this.onWho,
                 onMe: this.onMe,
                 onMessage: this.onMessage,
@@ -1578,6 +1607,54 @@ export default {
 
             // Send the server our current status and video setting.
             this.sendMe(true);
+        },
+        onDisconnectError(graceful=false) {
+            // Called when the ChatClient has disconnected in error and won't retry.
+            // This is typically fired when the client has tried to reconnect multiple times
+            // and hit the reconnect limit.
+            //
+            // If graceful=true it was a graceful disconnect, such as the ChatServer telling
+            // us "Your authentication has expired, please log back into the chat again."
+            let help = [];
+            if (graceful) {
+                help.push("You have disconnected from the server.");
+            } else {
+                help.push("It seems there's a problem connecting to the server. Please try some other time.");
+
+                // Give hint about Polling method instead of WebSockets?
+                if (!this.prefs.usePolling) {
+                    help.push(
+                        `<br><br>` +
+                        `If you experience this problem frequently, try going into the Chat Settings 'Advanced' tab ` +
+                        `and switch to the 'Polling' Server Connection method.`
+                    );
+                }
+            }
+
+            // Give hint about browser tab pausing?
+            let delta = this.pausedTab.longestDelta;
+            if (delta > 5000) {
+                help.push(
+                    `<br><br>` +
+                    `<strong>Maybe your browser tab is being paused?</strong> ` +
+                    `Mobile devices, and some desktop web browsers such as Google Chrome, ` +
+                    `may be putting the chat tab to sleep when you click away to another tab or app. The ` +
+                    `longest pause observed on this page has been <strong>` +
+                    delta.toFixed(2) + `ms</strong>, when the expected pause ` +
+                    `should only be around 1000ms.`,
+                )
+            }
+
+            // Add a troubleshooter footer on non-graceful error.
+            if (!graceful) {
+                help.push(
+                    `<br><br>` +
+                    `For help, please see the <a href="/about#disconnected" target="_blank">Connection Errors Troubleshooting</a> ` +
+                    `page for advice about connection issues, and how to avoid your web browser putting the tab to sleep.`
+                );
+            }
+
+            this.ChatClient(help.join(""));
         },
         onPing(msg) {
             // Updated JWT chat moderation rules?

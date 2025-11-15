@@ -575,6 +575,187 @@
                 This section contains some troubleshooting advice for issues commonly experienced in the chat room.
             </p>
 
+            <h2 id="disconnected">
+                Connection Errors &amp; Frequent Disconnects
+                <a href="#disconnected" class="fa fa-paragraph is-size-6"></a>
+            </h2>
+
+            <p>
+                If you are experiencing frequent errors staying connected to the chat room, one common
+                culprit <strong>may</strong> be that your web browser is <a href="#paused-tabs">putting the chat tab to sleep</a>.
+            </p>
+
+            <p>
+                By default, the chat room uses a "Web Socket" to keep you connected to the server so that
+                you receive timely updates when new messages come in, or when people join or leave the
+                chat room. Web Sockets require a constant connection to the server, and when that connection
+                is broken, the page will try and reconnect a couple of times.
+            </p>
+
+            <p>
+                On some flaky or unreliable networks, Web Sockets may not be able to hold a connection to
+                the server reliably. The first thing you can try, then, is to switch to the <strong>"Polling"</strong>
+                connection method for the chat room:
+            </p>
+
+            <ol>
+                <li>
+                    Open the Chat Settings by clicking on the blue
+                    <button type="button" class="button is-small is-link px-2">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    menu button in the top right corner of the page.
+                </li>
+                <li>
+                    Click on the "Advanced" tab of the Chat Settings.
+                </li>
+                <li>
+                    Under the "Server Connection Method" select the <strong>"Polling"</strong> option.
+                </li>
+            </ol>
+
+            <p>
+                The "Polling" option, instead of requiring a constant Web Socket connection, will instead have
+                the chat page "poll" for new messages every 5 seconds. This can make your connection to the
+                chat room more reliable, at the cost of some slight latency in receiving new messages from others.
+            </p>
+
+            <p>
+                Under the "Polling" method, <strong>if the server does not hear from you for 60 seconds</strong>,
+                it will assume you have gone away (closed the tab) and you will be signed out of the chat room.
+            </p>
+
+            <p>
+                If you still experience frequent "log outs" even with the Polling method, it strongly hints
+                that <strong>your web browser might be putting the chat tab to sleep.</strong>
+            </p>
+
+            <h3 id="paused-tabs">
+                Paused Web Browser Tabs
+                <a href="#paused-tabs" class="fa fa-paragraph is-size-6"></a>
+            </h3>
+
+            <p>
+                Many web browsers have a "tab sleeping" or "tab pause" feature which will pause a browser
+                tab when you have clicked away to another tab, or switched to another app on your device.
+                Mobile devices (such as iPhones, iPads and Androids) will do this when you switch to another
+                app so that they can save your battery by pausing any web pages that have been put in the
+                background.
+            </p>
+
+            <p>
+                Desktop web browsers, too, such as Google Chrome and Mozilla Firefox, have added this
+                feature in order to free up browser memory by putting other tabs on pause when you have
+                clicked away from them.
+            </p>
+
+            <p>
+                If the chat room is put on pause, this will cause disconnection errors. For example, the
+                default "Web Socket" (which requires a constant connection to the server) will be closed
+                as soon as the browser tab is paused, and, with the "Polling" method, even though the page
+                attempts to poll for new messages every 5 seconds, if your browser tab is paused for a full
+                minute, the chat server can only assume you have closed the tab and it will sign you out of
+                the chat room.
+            </p>
+
+            <p>
+                Please look through your web browser's settings to see if you can disable tab sleeping
+                or allow the {{.Hostname}} site to remain active in your browser. Here are a couple of
+                examples of places to look for this setting:
+            </p>
+
+            <p>
+                <strong>
+                    <i class="fab fa-chrome mr-1"></i> On Google Chrome (and maybe other Chromium browsers)
+                </strong>
+            </p>
+
+            <ol>
+                <li>
+                    Open your browser settings.
+                </li>
+                <li>
+                    Click on the "Performance" section.
+                </li>
+                <li>
+                    Under "General" look for the option "Always keep these sites active"
+                </li>
+                <li>
+                    Add {{.Hostname}} to the list of sites to always keep active.
+                </li>
+            </ol>
+
+            <p>
+                <strong>
+                    <i class="fab fa-edge mr-1"></i> On Microsoft Edge
+                </strong>
+            </p>
+
+            <ol>
+                <li>
+                    Open your browser settings.
+                </li>
+                <li>
+                    Click on the "System and Performance" section.
+                </li>
+                <li>
+                    Click on "Performance" <small>("Adjust performance settings like efficiency mode and sleeping tabs")</small>
+                </li>
+                <li>
+                    Next to "Never put these sites to sleep" click on the "Add site" button.
+                </li>
+                <li>
+                    Add {{.Hostname}} to the list of sites.
+                </li>
+            </ol>
+
+            <p>
+                <strong>
+                    <i class="fab fa-firefox mr-1"></i> On Mozilla Firefox
+                </strong>
+            </p>
+
+            <p>
+                Firefox <a href="https://support.mozilla.org/en-US/kb/unload-inactive-tabs-save-system-memory-firefox" target="_blank">
+                    will only put tabs to sleep
+                </a>
+                as a last ditch effort to free up system memory when you are running low on RAM. Advanced
+                Firefox users can tweak some related settings in their `about:config`, for example:
+            </p>
+
+            <ol>
+                <li>
+                    In your Firefox URL bar, type "about:config" and hit enter.
+                </li>
+                <li>
+                    Search for the setting "browser.tabs.unloadOnLowMemory" and set the value to "false"
+                </li>
+            </ol>
+
+            <p>
+                <strong>
+                    <i class="fa fa-mobile-screen-button mr-1"></i> On mobile devices
+                    (<i class="fab fa-apple"></i> iPad, iPhone, and <i class="fab fa-android"></i> Android)
+                </strong>
+            </p>
+
+            <p>
+                Mobile devices are especially aggressive about putting browser tabs (and whole entire apps!)
+                to sleep as early as possible in order to prolong your battery life.
+            </p>
+
+            <p>
+                For the best experience, you should keep the chat tab open &amp; visible on your screen at
+                all times. Some devices may allow you to <em>quickly</em> switch to another app, if you return
+                to the chat room within a few minutes, before your browser will be put to sleep.
+            </p>
+
+            <p>
+                Unfortunately, except for advanced users with custom modified Android devices, there are not
+                many options to prevent the chat tab (or your web browser entirely) from being put to sleep
+                on mobile devices.
+            </p>
+
             <h2 id="webcam-troubleshooting">
                 Webcam Sharing
                 <a href="#webcam-troubleshooting" class="fa fa-paragraph is-size-6"></a>

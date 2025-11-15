@@ -34,6 +34,7 @@ class ChatClient {
 
         // Misc function registrations for callback.
         onLoggedIn, // connection is fully established (first 'me' echo from server).
+        onDisconnectError,
         onNewJWT, // new JWT token from ping response
         bulkMuteUsers, // Upload our blocklist on connect.
         focusMessageBox, // Tell caller to focus the message entry box.
@@ -66,6 +67,7 @@ class ChatClient {
         this.onPing = onPing;
 
         this.onLoggedIn = onLoggedIn;
+        this.onDisconnectError = onDisconnectError;
         this.onNewJWT = onNewJWT;
         this.bulkMuteUsers = bulkMuteUsers;
         this.focusMessageBox = focusMessageBox;
@@ -107,7 +109,7 @@ class ChatClient {
             this.polling.sessionID = "";
             this.polling.username = "";
             this.stopPolling();
-            this.ChatClient("You have disconnected from the server.");
+            this.onDisconnectError(true);
             return;
         }
 
@@ -143,6 +145,14 @@ class ChatClient {
                 }
             }).catch(err => {
                 this.ChatClient("Error from polling API: " + err);
+
+                // Retry a couple times.
+                this.ws.disconnectCount++;
+                if (this.ws.disconnectCount > this.ws.disconnectLimit) {
+                    this.stopPolling();
+                    this.onDisconnectError();
+                    return;
+                }
             });
             return;
         }
@@ -281,11 +291,7 @@ class ChatClient {
 
             this.ws.disconnectCount++;
             if (this.ws.disconnectCount > this.ws.disconnectLimit) {
-                this.ChatClient(
-                    `It seems there's a problem connecting to the server. Please try some other time.<br><br>` +
-                    `If you experience this problem frequently, try going into the Chat Settings 'Misc' tab ` +
-                    `and switch to the 'Polling' Server Connection method.`
-                );
+                this.onDisconnectError();
                 return;
             }
 
