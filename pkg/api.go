@@ -997,6 +997,10 @@ func (s *Server) UserFriends() http.HandlerFunc {
 		})
 		if err != nil {
 			log.Error("Couldn't get friends information: %s", err)
+			enc.Encode(result{
+				Error: "Couldn't get friends information: " + err.Error(),
+			})
+			return
 		}
 
 		// Success? Try and parse the response into our expected format.
@@ -1024,6 +1028,9 @@ func (s *Server) UserFriends() http.HandlerFunc {
 		// but which was not included in the site's webhook response.
 		for _, username := range params.Usernames {
 			if _, ok := resp.Data.Friends[username]; !ok {
+				if resp.Data.Friends == nil {
+					resp.Data.Friends = map[string]bool{}
+				}
 				resp.Data.Friends[username] = false
 			}
 		}
