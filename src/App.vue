@@ -19,6 +19,7 @@ import VideoFlag from './lib/VideoFlag';
 import StatusMessage from './lib/StatusMessage';
 import { SoundEffects, DefaultSounds } from './lib/sounds';
 import WatermarkImage from './lib/watermark';
+import CompressImage from './lib/ResizeImage.js';
 
 import WebRTC from './lib/WebRTC.js';
 
@@ -2181,14 +2182,19 @@ export default {
         },
 
         // Common file selection handler for drag/drop or manual upload.
-        onFileSelected(file) {
+        async onFileSelected(file) {
             // Show the share modal so the user previews before posting it.
+            if (!file) return;
 
             // Validate they can upload it here.
             if (!this.canUploadFile) {
                 this.ChatClient("Photo sharing in this channel is not available.");
                 return;
             }
+
+            // Compress/resize the image for easy uploading.
+            const compressionResult = await CompressImage(file);
+            const compressedFile = compressionResult.file;
 
             // Get image file data.
             let reader = new FileReader();
@@ -2203,13 +2209,13 @@ export default {
                 }
 
                 // Show the modal.
-                this.photoShareModal.file = file;
-                this.photoShareModal.previewImg = URL.createObjectURL(file);
+                this.photoShareModal.file = compressedFile;
+                this.photoShareModal.previewImg = URL.createObjectURL(compressedFile);
                 this.photoShareModal.bytes = fileByteArray;
                 this.photoShareModal.visible = true;
             });
 
-            reader.readAsArrayBuffer(file);
+            reader.readAsArrayBuffer(compressedFile);
         },
         closePhotoShareModal() {
             this.photoShareModal.file = null;
