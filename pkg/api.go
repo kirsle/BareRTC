@@ -717,6 +717,163 @@ func (s *Server) DisconnectNow() http.HandlerFunc {
 	})
 }
 
+// WebRTC Config (/api/webrtc-config) fetches WebRTC settings from the server.
+//
+// This endpoint will return the STUN and TURN servers necessary for WebRTC.
+//
+// Authentication: the caller will pass their JWT token to this endpoint. If
+// your server is configured for strict JWT, the token is required to get the
+// WebRTC credentials.
+//
+// It is a POST request with a json body containing the following schema:
+//
+//	{
+//		"JWTToken": "the caller's jwt token"
+//	}
+//
+// The response JSON will be a WebRTC config object, like the following.
+// Note: the contents of WebRTCConfig will be a JSON encoded string that
+// the front-end will decode into an object.
+//
+//	{
+//		"OK": true,
+//		"Error": "only on errors",
+//		"WebRTCConfig": `{
+//			{
+//				"iceServers": [
+//					{
+//						"urls": [
+//							"stun:stun.l.google.com:19302",
+//							"turn:chat.example.com:3478"
+//						],
+//						"username": "webrtc",
+//						"credential": "webrtc"
+//					}
+//				]
+//			}
+//		}`
+//	}
+func (s *Server) WebRTCConfig() http.HandlerFunc {
+	type request struct {
+		JWTToken string
+	}
+
+	type iceServer struct {
+		URLs       []string `json:"urls"`
+		Username   string   `json:"username"`
+		Credential string   `json:"credential"`
+	}
+	type webrtcConfig struct {
+		IceServers []iceServer `json:"iceServers"`
+	}
+	type result struct {
+		OK           bool
+		Error        string `json:",omitempty"`
+		WebRTCConfig string
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// JSON writer for the response.
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+
+		// Default response is the hard-coded credentials from settings.toml.
+		var webrtc = webrtcConfig{
+			IceServers: []iceServer{
+				{
+					URLs:       config.Current.TURN.URLs,
+					Username:   config.Current.TURN.Username,
+					Credential: config.Current.TURN.Credential,
+				},
+			},
+		}
+		var toJson = func(v any) string {
+			b, _ := json.Marshal(v)
+			return string(b)
+		}
+
+		// Parse the request.
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Invalid Request Method",
+			})
+			return
+		} else if r.Header.Get("Content-Type") != "application/json" {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "Only application/json content-types allowed",
+			})
+			return
+		}
+
+		defer r.Body.Close()
+
+		// Parse the request payload.
+		var (
+			params request
+			dec    = json.NewDecoder(r.Body)
+		)
+		if err := dec.Decode(&params); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			enc.Encode(result{
+				Error: "JSON Request Decode Error",
+			})
+			return
+		}
+
+		// Parse and validate the user's JWT token.
+		if config.Current.JWT.Enabled {
+
+			// Strict JWT?
+			if config.Current.JWT.Strict && params.JWTToken == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				enc.Encode(result{
+					Error: "JWT Authentication Required",
+				})
+				return
+			}
+
+			// Validate the user's JWT token.
+			_, _, err := jwt.ParseAndValidate(params.JWTToken)
+			if err != nil && config.Current.JWT.Strict {
+				w.WriteHeader(http.StatusBadRequest)
+				enc.Encode(result{
+					Error: "Invalid JWT Token",
+				})
+				return
+			}
+		}
+
+		// Cloudflare TURN service?
+		if config.Current.TURN.CloudflareTurnKeyID != "" && config.Current.TURN.CloudflareTurnKeyAPIToken != "" {
+
+			// Get temporary TURN credentials.
+			config, err := GetCloudflareTURNCredentials()
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				enc.Encode(result{
+					Error: fmt.Sprintf("Didn't get Cloudflare TURN credentials: %s", err),
+				})
+				return
+			}
+
+			// Pass along the credentials directly.
+			enc.Encode(result{
+				OK:           true,
+				WebRTCConfig: config,
+			})
+			return
+		}
+
+		enc.Encode(result{
+			OK:           true,
+			WebRTCConfig: toJson(webrtc),
+		})
+	})
+}
+
 // UserProfile (/api/profile) fetches profile information about a user.
 //
 // This endpoint will proxy to your WebhookURL for the "profile" endpoint.

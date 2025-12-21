@@ -226,6 +226,45 @@ means the user was not presently online.
 
 # Ajax Endpoints (User API)
 
+## POST /api/webrtc-config
+
+This endpoint returns the WebRTC configuration (STUN and TURN servers) that
+enable users to connect to each other's webcams. The client will request this
+the first time a WebRTC request is needed, and will cache the response for up
+to 12 hours before checking again.
+
+If you use Cloudflare's TURN service and have configured your API keys in your
+settings.toml, then this endpoint will fetch ephemeral TURN credentials from
+Cloudflare (with a 24 hour TTL from Cloudflare). This creates unique credentials
+for every TURN client.
+
+If you do not use Cloudflare's TURN server, the endpoint returns the hard-coded
+list of URLs and credentials from your settings.toml file.
+
+The client POSTs to this endpoint passing along their JWT token, if they have one:
+
+```json
+{
+    "JWTToken": "the user's JWT login token"
+}
+```
+
+If your server is configured in Strict JWT mode, the JWT token is required and
+must be valid. Otherwise, if the end user did not have a JWT token, they do not
+post one and still get TURN server credentials. It is recommended to have JWT
+authentication enabled in Strict mode to protect your TURN server credentials.
+
+The API response will contain the usual envelope and the WebRTC config as a
+JSON encoded string.
+
+```javascript
+{
+    "OK": true,
+    "Error": "error message, if any",
+    "WebRTCConfig": `{"iceServers":[{"urls": "stun:stun.l.google.com:19302"}]}`
+}
+```
+
 ## POST /api/profile
 
 Fetch profile information from your main website about a user in the

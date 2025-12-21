@@ -11,22 +11,6 @@ import hark from 'hark';
 import VideoFlag from './VideoFlag.js';
 import LocalStorage from './LocalStorage.js';
 
-// WebRTC configuration.
-const configuration = {
-    iceServers: TURN.URLs.map(val => {
-        let row = {
-            urls: val,
-        };
-
-        if (val.indexOf('turn:') === 0) {
-            row.username = TURN.Username;
-            row.credential = TURN.Credential;
-        }
-
-        return row;
-    })
-};
-
 // Webcam sizes: ideal is 640x480 as this is the most friendly for end users, e.g. if everyone
 // broadcasted at 720p users on weaker hardware would run into problems sooner.
 const WebcamWidth = 640,
@@ -135,6 +119,10 @@ class WebRTCController {
 
             // WebRTC sessions with other users.
             WebRTC: {
+                // Configuration (STUN/TURN servers).
+                configuration: null,
+                configExpires: null,
+
                 // Streams per username.
                 streams: {},
                 muted: {}, // muted bool per username
@@ -380,10 +368,58 @@ class WebRTCController {
     // Vue.js mixin for the App.vue
     getMethods() {
         return {
+
+            // Get the WebRTC credentials from the server.
+            async getWebRTCConfig() {
+
+                const now = new Date().getTime() / 1000;
+
+                // Previous config is still good?
+                if (this.WebRTC.configExpires !== null) {
+                    if (now < this.WebRTC.configExpires) {
+                        return new Promise((resolve) => {
+                            resolve();
+                        });
+                    }
+                }
+
+                return fetch("/api/webrtc-config", {
+                    method: "POST",
+                    mode: "same-origin",
+                    cache: "no-cache",
+                    credentials: "same-origin",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        "JWTToken": this.jwt.token,
+                    }),
+                })
+                .then((response) => response.json())
+                .then(response => {
+                    if (!response.OK) {
+                        this.modalAlert({
+                            title: "Error getting WebRTC configuration",
+                            message: "Error getting WebRTC configuration: " + response.Error,
+                        });
+                        throw response.Error;
+                    }
+                    this.WebRTC.configuration = JSON.parse(response.WebRTCConfig);
+                    this.WebRTC.configExpires = now + (60*60*12);
+                })
+                .catch((e) => {
+                    console.error("getWebRTCConfig:", e);
+                    this.modalAlert({
+                        title: "Error getting WebRTC configuration",
+                        message: "An error has occurred when trying to get WebRTC settings from the server. Please refresh the page and try again.",
+                    });
+                })
+            },
+
             // Start WebRTC with the other username.
             startWebRTC(username, isOfferer) {
                 // this.ChatClient(`Begin WebRTC with ${username}.`);
-                let pc = new RTCPeerConnection(configuration);
+                let pc = new RTCPeerConnection(this.WebRTC.configuration);
 
                 // Store uni-directional PeerConnections:
                 // - If we are reading video from the other (offerer)
@@ -589,12 +625,16 @@ class WebRTCController {
             onOpen(msg) {
                 // Response for the opener to begin WebRTC connection.
                 this.DebugChannel(`[WebRTC] Received "open" echo from chat server to connect to: ${msg.username}`);
-                this.startWebRTC(msg.username, true);
+                this.getWebRTCConfig().then(() => {
+                    this.startWebRTC(msg.username, true);
+                });
             },
             onRing(msg) {
                 // Request from a viewer to see our broadcast.
                 this.DebugChannel(`[WebRTC] Received "ring" message from chat server to share my video with: ${msg.username}`);
-                this.startWebRTC(msg.username, false);
+                this.getWebRTCConfig().then(() => {
+                    this.startWebRTC(msg.username, false);
+                });
             },
             sendBoot(username) {
                 this.client.send({

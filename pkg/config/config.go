@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 21
+var currentVersion = 22
 
 // Config for your BareRTC app.
 type Config struct {
@@ -47,7 +47,7 @@ type Config struct {
 	HostImagesExpireDays int    `toml:"" comment:"If hosting images, expire/remove the files from disk after this many days."`
 	HostImagesURLPrefix  string `toml:"" comment:"URL prefix for hosted images. Use / for local URI, or https://chat.example.com/ (mind the trailing slash!) for absolute URI.\nRecommended to use an absolute URI so if the image is reported to your site, the link is easily viewable."`
 
-	TURN TurnConfig `toml:"" comment:"Configure your TURN or STUN servers here.\n\nSTUN servers help WebRTC clients connect peer-to-peer for video, which is\npreferable as it saves on your bandwidth. You should list at least one, and\nthere are many public servers available such as Google's.\n\nTURN servers help WebRTC clients connect when a direct connection isn't\npossible. An open source server called 'coturn' can do both STUN and TURN."`
+	TURN TurnConfig `toml:"" comment:"Configure your TURN or STUN servers here.\n\nSTUN servers help WebRTC clients connect peer-to-peer for video, which is\npreferable as it saves on your bandwidth. You should list at least one, and\nthere are many public servers available such as Google's.\n\nTURN servers help WebRTC clients connect when a direct connection isn't\npossible. An open source server called 'coturn' can do both STUN and TURN.\n\nIf using a custom TURN server, e.g. coturn, add an entry such as\n'turn:chat.example.com:3478' and provide the hardcoded credentials."`
 
 	PublicChannels []Channel `toml:"" comment:"Your pre-defined common public chat rooms.\n"`
 
@@ -71,6 +71,10 @@ type TurnConfig struct {
 	URLs       []string
 	Username   string
 	Credential string
+
+	// Cloudflare TURN server.
+	CloudflareTurnKeyID       string `toml:"" comment:"To optionally use Cloudflare's hosted TURN service, provide your TURN_KEY_ID\nand TURN_KEY_API_TOKEN here. When enabled, the STUN/TURN servers and credentials\nwill all come from Cloudflare; the configured URLs and credentials above are\nignored in favor of Cloudflare's."`
+	CloudflareTurnKeyAPIToken string
 }
 
 type VIP struct {
