@@ -13,7 +13,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 22
+var currentVersion = 23
 
 // Config for your BareRTC app.
 type Config struct {
@@ -91,6 +91,10 @@ type DirectMessageHistory struct {
 	PostgresDatabase  string
 	RetentionDays     int
 	DisclaimerMessage string
+
+	// Connection pooling.
+	DatabaseMaxIdleConns int `toml:"" comment:"Tune the connection pooling settings for your database.\nSet to 0 to not pool connections."`
+	DatabaseMaxOpenConns int
 }
 
 type DMLinkSpamProtection struct {
@@ -271,12 +275,14 @@ func DefaultConfig() Config {
 			ModRuleErrorNoImage:          "A chat server moderation rule is currently in place which restricts your ability to share images. Please contact a chat operator for more information.",
 		},
 		DirectMessageHistory: DirectMessageHistory{
-			Enabled:           false,
-			DatabaseType:      "sqlite3",
-			SQLiteDatabase:    "database.sqlite",
-			PostgresDatabase:  "host=localhost user=barertc password=barertc dbname=barertc sslmode=disable TimeZone=America/Los_Angeles",
-			RetentionDays:     90,
-			DisclaimerMessage: `<i class="fa fa-info-circle mr-1"></i> <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.`,
+			Enabled:              false,
+			DatabaseType:         "sqlite3",
+			SQLiteDatabase:       "database.sqlite",
+			PostgresDatabase:     "host=localhost user=barertc password=barertc dbname=barertc sslmode=disable TimeZone=America/Los_Angeles",
+			RetentionDays:        90,
+			DisclaimerMessage:    `<i class="fa fa-info-circle mr-1"></i> <strong>Reminder:</strong> please conduct yourself honorably in Direct Messages.`,
+			DatabaseMaxIdleConns: 10,
+			DatabaseMaxOpenConns: 50,
 		},
 		DMLinkSpamProtection: DMLinkSpamProtection{
 			Enabled:    true,

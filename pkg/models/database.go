@@ -3,7 +3,9 @@ package models
 import (
 	"errors"
 	"fmt"
+	"time"
 
+	"git.kirsle.net/apps/barertc/pkg/config"
 	"git.kirsle.net/apps/barertc/pkg/log"
 	_ "github.com/mattn/go-sqlite3"
 	"gorm.io/driver/postgres"
@@ -43,6 +45,18 @@ func Initialize(dbtype, connString string) error {
 		DB = db
 	default:
 		return errors.New("dbtype not supported: must be sqlite3 or postgres")
+	}
+
+	// Set connection pooling.
+	if idle, open := config.Current.DirectMessageHistory.DatabaseMaxIdleConns, config.Current.DirectMessageHistory.DatabaseMaxOpenConns; idle > 0 && open > 0 {
+		if sqlDB, err := DB.DB(); err != nil {
+			log.Error("Error setting connection pooling: couldn't get SQL DB: %s", err)
+		} else {
+			log.Info("Setting DB connection pool to %d idle/%d open", idle, open)
+			sqlDB.SetMaxIdleConns(idle)
+			sqlDB.SetMaxOpenConns(open)
+			sqlDB.SetConnMaxLifetime(time.Hour)
+		}
 	}
 
 	AutoMigrate()
