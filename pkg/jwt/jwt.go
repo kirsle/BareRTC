@@ -21,10 +21,27 @@ type Claims struct {
 	Emoji      string `json:"emoji,omitempty"`
 	Gender     string `json:"gender,omitempty"`
 	Rules      Rules  `json:"rules,omitempty"`
+	Flair      Flair  `json:"flair,omitempty"`
 
 	// Standard claims. Notes:
 	// subject = username
 	jwt.RegisteredClaims
+}
+
+// Flair adds an optional custom icon and decoration to users on chat (e.g. like VIP but no special features).
+type Flair struct {
+	// Plain text of the flair, e.g. "Newbie"
+	Name string `json:"name,omitempty"`
+
+	// Bulma CSS color class for the flair icon and tag color in Profile Cards.
+	// One of: info, success, warning, danger, private
+	// Gets composed into class names e.g.: has-text-info, is-info
+	Color string `json:"color,omitempty"`
+
+	// FontAwesome CSS classes for the icon.
+	// e.g.: "fa fa-star"
+	// Default: "fa fa-star"
+	Icon string `json:"icon,omitempty"`
 }
 
 // ToJSON serializes the claims to JavaScript.

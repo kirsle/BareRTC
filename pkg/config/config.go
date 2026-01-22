@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"os"
+	"slices"
 	"time"
 
 	"git.kirsle.net/apps/barertc/pkg/log"
@@ -13,7 +14,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 23
+var currentVersion = 24
 
 // Config for your BareRTC app.
 type Config struct {
@@ -40,8 +41,10 @@ type Config struct {
 
 	WebSocketReadLimit   int64
 	WebSocketSendTimeout int
-	MaxImageWidth        int
-	PreviewImageWidth    int
+
+	ImageDMPermission string `toml:"" comment:"Who can share images in DMs? Ops, VIP users, or anybody?\nOne of: admin, vip, any, none"`
+	MaxImageWidth     int
+	PreviewImageWidth int
 
 	HostImages           bool   `toml:"" comment:"Whether to host shared image files on the BareRTC server. If false (default), images\nare sent out as data: URLs and don't require hosting. If true, images will be stored temporarily\non disk. This may be useful for end user performance, or for moderators to check out a\nreported image they weren't online to see when it came in."`
 	HostImagesExpireDays int    `toml:"" comment:"If hosting images, expire/remove the files from disk after this many days."`
@@ -194,6 +197,7 @@ func DefaultConfig() Config {
 		MaxImageWidth:        1280,
 		PreviewImageWidth:    360,
 		AnnounceKicks:        true,
+		ImageDMPermission:    "admin",
 		HostImagesExpireDays: 7,
 		HostImagesURLPrefix:  "/",
 		PublicChannels: []Channel{
@@ -324,6 +328,14 @@ func LoadSettings() error {
 		if err := WriteSettings(); err != nil {
 			log.Error("Couldn't write your settings.toml file: %s", err)
 		}
+	}
+
+	// Validate and warn about errors.
+	if !slices.Contains([]string{"admin", "vip", "any", "none"}, Current.ImageDMPermission) {
+		log.Error(
+			"In settings.toml: %s must be one of admin, vip, any (currently is: %s)",
+			Current.ImageDMPermission,
+		)
 	}
 
 	return err

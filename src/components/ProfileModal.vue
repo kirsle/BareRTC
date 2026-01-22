@@ -301,7 +301,7 @@ export default {
 
         // Alert Modal funcs, copied from/the same as App.vue (TODO: make it D.R.Y.)
         async modalAlert({ message, title="Alert", icon="", isConfirm=false }) {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 this.alertModal.isConfirm = isConfirm;
                 this.alertModal.title = title;
                 this.alertModal.icon = icon;
@@ -373,7 +373,7 @@ export default {
                             </div>
 
                             <!-- User badges -->
-                            <div v-if="user.op || user.vip || user.emoji" class="mt-4">
+                            <div v-if="user.op || user.vip || user.emoji || user.flair?.name" class="mt-4">
                                 <!-- Emoji icon -->
                                 <span v-if="user.emoji" class="mr-2">
                                     {{ user.emoji }}
@@ -389,6 +389,12 @@ export default {
                                     :title="vipConfig.Name">
                                     <i class="mr-1" :class="vipConfig.Icon"></i>
                                     {{ vipConfig.Name }}
+                                </span>
+
+                                <!-- Flaired? -->
+                                <span v-if="user.flair?.name" class="tag is-light mr-2" :class="`is-${user.flair.color || 'is-info'}`">
+                                    <i class="mr-1" :class="user.flair.icon || 'fa fa-star'"></i>
+                                    {{ user.flair.name }}
                                 </span>
                             </div>
                         </div>

@@ -12,6 +12,7 @@ AdminAPIKey = "e635e463-7987-4788-94f3-671a5c2a589f"
 PermitNSFW = true
 UseXForwardedFor = false
 WebSocketReadLimit = 40971520
+ImageDMPermission = "admin"
 MaxImageWidth = 1280
 PreviewImageWidth = 360
 
@@ -102,6 +103,11 @@ A description of the config directives includes:
 * **PermitNSFW**: for user webcam streams, expressly permit "NSFW" content if the user opts in to mark their feed as such. Setting this will enable pop-up modals regarding NSFW video and give broadcasters an opt-in button, which will warn other users before they click in to watch.
 * **UseXForwardedFor**: set it to true and (for logging) the user's remote IP will use the X-Real-IP header or the first address in X-Forwarded-For. Set this if you run the app behind a proxy like nginx if you want IPs not to be all localhost.
 * **WebSocketReadLimit**: sets a size limit for WebSocket messages - it essentially also caps the max upload size for shared images (add a buffer as images will be base64 encoded on upload).
+* **ImageDMPermission**: control who is allowed to send images over Direct Messages. One of admin, vip, any, none.
+    * admin: only chat operators (as well as their chat partners) can share images with each other. Their chat partner is allowed in case they need to send screenshots or support questions to the operator. This is the default setting.
+    * vip: only VIP users can send images on DMs, but not their non-VIP chat partners. Admins and their partners can share images with each other too.
+    * any: all users on chat are allowed to share images on DMs.
+    * none: nobody on chat can share images on DMs, not even admins.
 * **MaxImageWidth**: for pictures shared in chat the server will resize them down to no larger than this width for the full size view.
 * **PreviewImageWidth**: to not flood the chat, the image in chat is this wide and users can click it to see the MaxImageWidth in a lightbox modal.
 

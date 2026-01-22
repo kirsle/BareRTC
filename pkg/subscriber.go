@@ -221,6 +221,14 @@ func (sub *Subscriber) IsVIP() bool {
 	return sub.JWTClaims != nil && sub.JWTClaims.VIP
 }
 
+// GetFlair gets the user's Flair from their JWT token, if set, or returns an empty flair.
+func (sub *Subscriber) GetFlair() jwt.Flair {
+	if sub.JWTClaims != nil {
+		return sub.JWTClaims.Flair
+	}
+	return jwt.Flair{}
+}
+
 // SendJSON sends a JSON message to the websocket client.
 func (sub *Subscriber) SendJSON(v interface{}) error {
 	data, err := json.Marshal(v)
@@ -524,6 +532,7 @@ func (s *Server) SendWhoList() {
 				Username: user.Username,
 				Status:   user.ChatStatus,
 				Video:    user.VideoStatus,
+				Flair:    user.GetFlair(),
 				DND:      user.DND,
 				LoginAt:  user.loginAt.Unix(),
 			}

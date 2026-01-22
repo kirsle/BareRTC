@@ -113,8 +113,30 @@ Here is in-depth documentation on what custom claims are supported by BareRTC an
     * Country flag emojis, to indicate where your users are connecting from.
     * Robot emojis, to indicate bot users.
     * Any emoji you want! Mark your special guests or VIP users, etc.
+* **VIP** (`vip`): mark the user as a VIP, giving them the VIP flair and additional features. See [VIP Users](#vip-users) below.
+* **Flair** (`flare`): decorate the user with a custom icon and label on the Who's Online list. See [JWT Flairs](#jwt-flairs), below.
 * **Rules** (`rules`): a string array of moderation rules to apply to the joining user, dictated by your website.
     * See [JWT Moderation Rules](./Configuration.md#jwt-moderation-rules) for available values.
+
+## VIP Users
+
+Users with the VIP setting enabled in their JWT token get the following effects on chat:
+
+* Their username is [Flaired](#jwt-flairs) using the icon and name in your [settings.toml](Configuration.md) file.
+* They may use VIP-only special features such as:
+    * A webcam visibility option so only VIP users can watch.
+    * Access to any VIP-only chat channels configured in settings.toml
+    * Ability to share images over DMs (per settings.toml ImageDMPermission)
+
+## JWT Flairs
+
+With the JWT token, you may **optionally** attach a custom "flair" to users as they log in. These can be used to decorate the user's name with a custom icon and badge on the Who's Online list and Profile Cards.
+
+Flaired users are decorated similarly to "VIP Users" but they have no special privileges attached.
+
+If a user is both VIP and Flaired, the Flair takes priority.
+
+If a flaired user is an Operator (admin), the Who's Online list will show the admin icon and their Profile Card will show both their Operator flair and their custom one.
 
 ## JWT Strict Mode
 

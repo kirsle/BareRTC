@@ -74,6 +74,7 @@ export default {
                 dmDisclaimer: DMDisclaimer,
                 website: WebsiteURL,
                 permitNSFW: PermitNSFW,
+                imageDMPermission: ImageDMPermission,
                 webhookURLs: WebhookURLs,
                 cacheHash: CacheHash,
                 VIP: VIP,
@@ -597,20 +598,34 @@ export default {
                 return false;
             }
 
-            // User is an admin?
-            if (this.jwt.claims.op) {
-                return true;
-            }
-
-            // User is in a DM thread with an admin?
+            // If admins can share images, so too can their chat partner so they can
+            // share support images/screenshots/etc. with admins.
+            let isPartnerOp = false;
             if (this.isDM) {
                 let partner = this.normalizeUsername(this.channel);
-                if (this.whoMap[partner] != undefined && this.whoMap[partner].op) {
-                    return true;
-                }
+                isPartnerOp = this.whoMap[partner] != undefined && this.whoMap[partner].op;
             }
 
-            return !this.isDM;
+            // What is the ImageDMPermission from settings.toml?
+            switch (this.config.imageDMPermission) {
+                case "admin":
+                    // An admin is in the room?
+                    return this.isOp || isPartnerOp;
+
+                case "vip":
+                    // VIPs can send pictures, or anybody if an admin is in the chat.
+                    return this.isVIP || (this.isOp || isPartnerOp);
+
+                case "any":
+                    // All users can share pictures in DMs.
+                    return true;
+
+                case "none":
+                    // Nobody can share pictures in DMs.
+                    return false;
+            }
+
+            return false;
         },
         isOp() {
             // Returns if the current user has operator rights

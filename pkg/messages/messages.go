@@ -3,6 +3,8 @@ package messages
 import (
 	"sync"
 	"time"
+
+	"git.kirsle.net/apps/barertc/pkg/jwt"
 )
 
 // Auto incrementing Message ID for anything pushed out by the server.
@@ -113,12 +115,13 @@ const (
 
 // WhoList is a member entry in the chat room.
 type WhoList struct {
-	Username string `json:"username"`
-	Nickname string `json:"nickname,omitempty"`
-	Status   string `json:"status"`
-	Video    int    `json:"video"`
-	DND      bool   `json:"dnd,omitempty"`
-	LoginAt  int64  `json:"loginAt"`
+	Username string    `json:"username"`
+	Nickname string    `json:"nickname,omitempty"`
+	Status   string    `json:"status"`
+	Video    int       `json:"video"`
+	Flair    jwt.Flair `json:"flair,omitempty"`
+	DND      bool      `json:"dnd,omitempty"`
+	LoginAt  int64     `json:"loginAt"`
 
 	// JWT auth extra settings.
 	Operator   bool   `json:"op"`

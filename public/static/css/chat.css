@@ -41,6 +41,10 @@ img {
 .has-text-private {
     color: #CC00CC !important;
 }
+.tag.is-private {
+    background-color: #FFCCFF !important;
+    color: #CC00CC !important;
+}
 
 /* Truncate long text, e.g. usernames in the who list */
 .truncate-text-line {

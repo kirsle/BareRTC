@@ -2091,7 +2091,9 @@ class WebRTCController {
         }
 
         if (user.video & VideoFlag.VipOnly) {
-            parts.push(`${this.vipConfig.Name} only`);
+            // Note: uses the global VIP variable from index.html,
+            // as this function is outside the Vue context.
+            parts.push(`${VIP.Name} only`);
         }
 
         if (user.video & VideoFlag.NonExplicit) {
