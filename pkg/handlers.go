@@ -444,8 +444,14 @@ func (s *Server) OnFile(sub *Subscriber, msg messages.Message) {
 
 		// Don't deliver it if the receiver has muted us.
 		rcpt, err := s.GetSubscriber(strings.TrimPrefix(msg.Channel, "@"))
-		if err == nil && rcpt.Mutes(sub.Username) {
+		if err == nil && rcpt != nil && rcpt.Mutes(sub.Username) {
 			log.Debug("Do not send message to %s: they have muted or booted %s", rcpt.Username, sub.Username)
+			return
+		}
+
+		// nil pointer guard: not sure how it happened but...
+		if rcpt == nil {
+			sub.ChatServer("An unexpected error has occurred: recipient %s was not found.", msg.Channel)
 			return
 		}
 
