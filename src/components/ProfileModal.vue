@@ -384,8 +384,8 @@ export default {
                                     <i class="fa fa-peace mr-1"></i> Operator
                                 </span>
 
-                                <!-- VIP? -->
-                                <span v-if="vipConfig && user.vip" class="tag is-success is-light mr-2"
+                                <!-- VIP? Hidden if the flair has NoVIP set. -->
+                                <span v-if="vipConfig && user.vip && !user.flair?.noVIP" class="tag is-success is-light mr-2"
                                     :title="vipConfig.Name">
                                     <i class="mr-1" :class="vipConfig.Icon"></i>
                                     {{ vipConfig.Name }}

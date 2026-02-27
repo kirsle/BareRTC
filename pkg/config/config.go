@@ -14,7 +14,7 @@ import (
 
 // Version of the config format - when new fields are added, it will attempt
 // to write the settings.toml to disk so new defaults populate.
-var currentVersion = 24
+var currentVersion = 25
 
 // Config for your BareRTC app.
 type Config struct {
@@ -85,6 +85,7 @@ type VIP struct {
 	Branding       string
 	Icon           string
 	MutuallySecret bool
+	VIPCameras     bool `toml:"" comment:"Allow VIP users to set their Webcam visibility to only fellow VIP users."`
 }
 
 type DirectMessageHistory struct {

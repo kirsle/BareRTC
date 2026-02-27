@@ -42,6 +42,11 @@ type Flair struct {
 	// e.g.: "fa fa-star"
 	// Default: "fa fa-star"
 	Icon string `json:"icon,omitempty"`
+
+	// NoVIP boolean: if set on a user with VIP status, their VIP flair is hidden from display.
+	// Other custom Flair properties may still show. If the Flair has only NoVIP set but everything
+	// else empty, then no VIP and no custom flair will show.
+	NoVIP bool `json:"noVIP,omitempty"`
 }
 
 // ToJSON serializes the claims to JavaScript.

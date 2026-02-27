@@ -35,7 +35,7 @@ export default {
             let result = "";
 
             // VIP background.
-            if (this.user.vip) {
+            if (this.user.vip && !this.user.flair?.noVIP) {
                 result = "has-background-vip ";
             }
 
@@ -158,7 +158,7 @@ export default {
             <sup v-else-if="user.flair?.icon" class="is-size-7 ml-1"
                 :class="`${user.flair.icon || 'fa fa-star'} has-text-${user.flair.color || 'info'}`"
                 :title="user.flair.name"></sup>
-            <sup class="is-size-7 ml-1" :class="vipConfig.Icon" v-else-if="user.vip"
+            <sup class="is-size-7 ml-1" :class="vipConfig.Icon" v-else-if="user.vip && !user.flair?.noVIP"
                 :title="vipConfig.Name"></sup>
         </div>
         <div class="column is-narrow pl-0">

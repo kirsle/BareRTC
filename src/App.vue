@@ -3194,7 +3194,7 @@ export default {
                             </label>
                         </div>
 
-                        <div class="field mb-1" v-if="isVIP">
+                        <div class="field mb-1" v-if="isVIP && config.VIP.VIPCameras">
                             <label class="checkbox">
                                 <input type="checkbox" v-model="webcam.vipOnly">
                                 Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7"
@@ -3488,7 +3488,7 @@ export default {
                         </label>
                     </div>
 
-                    <div class="field" v-if="isVIP">
+                    <div class="field" v-if="isVIP && config.VIP.VIPCameras">
                         <label class="checkbox">
                             <input type="checkbox" v-model="webcam.vipOnly">
                             Only <span v-html="config.VIP.Branding"></span> <sup class="is-size-7"

@@ -26,6 +26,12 @@ Configure a shared secret key (random text string) in both the BareRTC settings 
     "gender": "m",                        // gender (m, f, o)
     "emoji": "🤖",                        // emoji icon
     "rules": ["redcam", "noimage"],       // moderation rules (optional)
+    "flair": {
+        // Optional, custom flairs to decorate the user with.
+        "name": "It's my birthday!",
+        "color": "info",
+        "icon": "fa fa-cake-candles"
+    }
 
     // Standard JWT claims that we support:
     "iss": "my own app", // Issuer name
@@ -114,7 +120,7 @@ Here is in-depth documentation on what custom claims are supported by BareRTC an
     * Robot emojis, to indicate bot users.
     * Any emoji you want! Mark your special guests or VIP users, etc.
 * **VIP** (`vip`): mark the user as a VIP, giving them the VIP flair and additional features. See [VIP Users](#vip-users) below.
-* **Flair** (`flare`): decorate the user with a custom icon and label on the Who's Online list. See [JWT Flairs](#jwt-flairs), below.
+* **Flair** (`flair`): decorate the user with a custom icon and label on the Who's Online list. See [JWT Flairs](#jwt-flairs), below.
 * **Rules** (`rules`): a string array of moderation rules to apply to the joining user, dictated by your website.
     * See [JWT Moderation Rules](./Configuration.md#jwt-moderation-rules) for available values.
 
@@ -137,6 +143,57 @@ Flaired users are decorated similarly to "VIP Users" but they have no special pr
 If a user is both VIP and Flaired, the Flair takes priority.
 
 If a flaired user is an Operator (admin), the Who's Online list will show the admin icon and their Profile Card will show both their Operator flair and their custom one.
+
+The flair setting is included in the JWT token like so:
+
+```javascript
+{
+    // Custom claims.
+    "sub": "username",
+    "nick": "Display name",
+    "img": "/static/photos/username.jpg",
+    "url": "/u/username",
+    "flair": {
+        "name": "It's my birthday!",
+        "color": "info",
+        "icon": "fa fa-cake-candles"
+    }
+
+    // Standard JWT claims also supported.
+    "iss": "my own app", // Issuer name
+    "exp": 1675645084,   // Expires at (time): 5 minutes out is plenty!
+    "nbf": 1675644784,   // Not Before (time)
+    "iat": 1675644784,   // Issued At (time)
+}
+```
+
+### NoVIP Flair
+
+The JWT Flair object can include an optional `noVIP` boolean which has a special behavior for VIP users: it will suppress their VIP flair from being displayed, but still give them the benefits of being a VIP user.
+
+Example in JWT:
+
+```javascript
+{
+    "sub": "username",
+    "nick": "Display name",
+    "img": "/static/photos/username.jpg",
+    "url": "/u/username",
+    "vip": true,  // User is a VIP
+    "flair": {
+        "noVIP": true  // But hide the VIP flair.
+    }
+
+    "iss": "my own app",
+    "exp": 1675645084,
+    "nbf": 1675644784,
+    "iat": 1675644784,
+}
+```
+
+This will cause their VIP flair to be suppressed and not shown on the page.
+
+Note: you can still give them a replacement flair, if the Name, Icon and Color are defined as normal. This flair will still show next to their name, but with the noVIP option, their VIP flair will not.
 
 ## JWT Strict Mode
 
