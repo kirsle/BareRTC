@@ -2130,11 +2130,7 @@ export default {
 
         // CSS classes for the profile button (color coded genders)
         profileButtonClass(user) {
-            // VIP background.
             let result = "";
-            if (user.vip) {
-                result = "has-background-vip ";
-            }
 
             let gender = (user.gender || "").toLowerCase();
             if (gender.indexOf("m") === 0) {

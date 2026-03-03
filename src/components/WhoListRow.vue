@@ -34,11 +34,6 @@ export default {
         profileButtonClass() {
             let result = "";
 
-            // VIP background.
-            if (this.user.vip && !this.user.flair?.noVIP) {
-                result = "has-background-vip ";
-            }
-
             let gender = (this.user.gender || "").toLowerCase();
             if (gender.indexOf("m") === 0) {
                 return result + "has-text-gender-male";
