@@ -6,6 +6,7 @@ export default {
         localVideo: Boolean,  // is our local webcam (not other's camera)
         poppedOut: Boolean,   // Video is popped-out and draggable
         username: String,     // username related to this video
+        profileUrl: String,   // hyperlink for username (or '#')
         isExplicit: Boolean,  // camera is marked Explicit
         isMuted: Boolean,     // camera is muted on our end
         isSourceMuted: Boolean, // camera is muted on the broadcaster's end
@@ -249,7 +250,7 @@ export default {
         <!-- Caption -->
         <div class="caption" :class="textColorClass">
             <i class="fa fa-microphone-slash mr-1 has-text-grey" v-if="isSourceMuted"></i>
-            <a href="#" @click.prevent="openProfile" :class="textColorClass">{{ username }}</a>
+            <a :href="profileUrl || '#'" @click.prevent="openProfile" :class="textColorClass">{{ username }}</a>
             <i class="fa fa-people-arrows ml-1 has-text-grey is-size-7" :title="username + ' is watching your camera too'"
                 v-if="isWatchingMe"></i>
 
